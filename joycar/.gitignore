@@ -1,0 +1,7 @@
+*.o
+*.bak
+*.swp
+*.dep
+*.uvopt
+project/list/
+project/obj/
