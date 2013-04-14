@@ -9,9 +9,10 @@ enum
 static int input_index;
 static char input_buf[BUF_SIZE];
 
-int construct_command(char c)
+int construct_command(char c, char *command_buf)
 {
     int i;
+    int ret = 0;
 
     if (state == OUT_COMMAND)
     {
@@ -25,7 +26,7 @@ int construct_command(char c)
     {
         if (c == ']')
         {
-            command_len = input_index;
+            ret = input_index;
             for (i = 0; i < input_index; i++)
             {
                 command_buf[i] = input_buf[i];
@@ -34,15 +35,17 @@ int construct_command(char c)
 
             input_index = 0;
             state = OUT_COMMAND;
-
-            return 1;
         }
         else
         {
-            input_buf[input_index++] = c;
+            input_buf[input_index] = c;
+            if (input_index < BUF_SIZE - 1)
+            {
+                input_index++;
+            }
         }
     }
 
-    return 0;
+    return ret;
 }
 
