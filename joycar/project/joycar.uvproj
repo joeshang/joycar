@@ -345,7 +345,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\libraries\CMSIS\CM3\CoreSupport;..\libraries\STM32F10x_StdPeriph_Driver\inc;..\libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x;..\user;..\basic_drivers</IncludePath>
+              <IncludePath>..\libraries\CMSIS\CM3\CoreSupport;..\libraries\STM32F10x_StdPeriph_Driver\inc;..\libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x;..\user;..\basic_drivers;..\external_drivers\motor;..\external_drivers\holder</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -390,6 +390,16 @@
               <FileType>1</FileType>
               <FilePath>..\user\main.c</FilePath>
             </File>
+            <File>
+              <FileName>command.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\command.c</FilePath>
+            </File>
+            <File>
+              <FileName>utility.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\utility.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -400,7 +410,45 @@
               <FileType>1</FileType>
               <FilePath>..\basic_drivers\usart.c</FilePath>
             </File>
+            <File>
+              <FileName>nvic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\basic_drivers\nvic.c</FilePath>
+            </File>
+            <File>
+              <FileName>rcc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\basic_drivers\rcc.c</FilePath>
+            </File>
+            <File>
+              <FileName>systick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\basic_drivers\systick.c</FilePath>
+            </File>
           </Files>
+        </Group>
+        <Group>
+          <GroupName>motor</GroupName>
+          <Files>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\external_drivers\motor\motor.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>holder</GroupName>
+          <Files>
+            <File>
+              <FileName>holder.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\external_drivers\holder\holder.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>camera</GroupName>
         </Group>
         <Group>
           <GroupName>startup</GroupName>
@@ -444,6 +492,16 @@
               <FileName>stm32f10x_usart.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\libraries\STM32F10x_StdPeriph_Driver\src\stm32f10x_usart.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\libraries\STM32F10x_StdPeriph_Driver\src\stm32f10x_tim.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f10x_flash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\libraries\STM32F10x_StdPeriph_Driver\src\stm32f10x_flash.c</FilePath>
             </File>
           </Files>
         </Group>

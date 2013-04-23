@@ -4,18 +4,28 @@
  * Description: The main program of JoyCar.
  */
 
-#include "usart.h"
-#include "stm32f10x.h"
 #include <stdio.h>
+#include "stm32f10x.h"
+#include "usart.h"
+#include "nvic.h"
+#include "rcc.h"
+#include "config.h"
+#include "command.h"
 
 int main(void)
 {
-	char data;
-	Usart_Initialization();
+	RCC_Config();
+	NVIC_Config();
+	USART_Config();
 
-	while(1)	   
+	USART_SendString(USART1, "JoyCar Project\r\n");
+
+	while (1)	   
 	{
-		data = Usart_GetChar(USART1);
-		Usart_SendChar(USART1, data);
+		if (command_len)
+		{
+			parse_command(command, command_len);
+			command_len = 0;
+		}
 	}
 }
