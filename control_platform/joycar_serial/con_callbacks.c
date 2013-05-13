@@ -16,7 +16,8 @@ void connector_open_callback(void *data, void *ctx)
     GtkWidget *disconnect_btn;
     GtkImage *status_img;
 
-    printf("open callback\n");
+    printf("connector open callback:\n");
+
     if (data == NULL) /* open success */
     {
         disconnect_btn = GTK_WIDGET(gtk_builder_get_object(builder, "disconnect_btn"));

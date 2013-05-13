@@ -45,6 +45,7 @@ static void *serial_thread_handler(void *arg)
             listener.cb_func(strerror(errno), listener.ctx);
         }
         perror("open serial fail");
+        pthread_exit(NULL);
     }
 
     serial_set_raw_mode(priv->fd);
@@ -61,7 +62,7 @@ static void *serial_thread_handler(void *arg)
     pthread_exit(NULL);
 }
 
-Ret connector_serial_open(Connector *thiz, void *arg)
+static Ret connector_serial_open(Connector *thiz, void *arg)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
     SerialArg *serial_arg = (SerialArg *)arg;
@@ -79,7 +80,7 @@ Ret connector_serial_open(Connector *thiz, void *arg)
     return RET_OK;
 }
 
-Ret connector_serial_close(Connector *thiz)
+static Ret connector_serial_close(Connector *thiz)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
     priv->status = 0;
@@ -88,7 +89,7 @@ Ret connector_serial_close(Connector *thiz)
     return RET_OK;
 }
 
-void connector_serial_send(Connector *thiz, void *buf, size_t size)
+static void connector_serial_send(Connector *thiz, void *buf, size_t size)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
 
@@ -98,7 +99,7 @@ void connector_serial_send(Connector *thiz, void *buf, size_t size)
     }
 }
 
-void connector_serial_destroy(Connector *thiz)
+static void connector_serial_destroy(Connector *thiz)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
     free(priv->serial_port);
