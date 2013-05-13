@@ -7,6 +7,8 @@
 #ifndef _CONNECTOR_H_
 #define _CONNECTOR_H_
 
+#include <stdio.h>
+
 #include "typedef.h"
 
 DECLS_BEGIN
@@ -67,6 +69,7 @@ static inline Ret connector_send(Connector *thiz, void *buf, size_t size)
 {
     return_val_if_fail(thiz != NULL && thiz->send != NULL, RET_INVALID_PARAMS);
 
+    printf("%s\n", (char *)buf);
     thiz->send(thiz, buf, size);
 
     return RET_OK;

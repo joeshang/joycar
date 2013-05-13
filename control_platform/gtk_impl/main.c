@@ -11,6 +11,8 @@
 #include "connector_serial.h"
 #include "con_callbacks.h"
 
+#define GLADE_FILE  "gui/joycar.glade"
+
 Connector *serial_connector = NULL;
 Connector *net_connector = NULL;
 
@@ -24,7 +26,7 @@ int main(int argc, char *argv[])
 
     /* load glade gui file and connect signal-callbacks */
     builder = gtk_builder_new();
-    gtk_builder_add_from_file(builder, "joycar.glade", NULL);
+    gtk_builder_add_from_file(builder, GLADE_FILE, NULL);
     gtk_builder_connect_signals(builder, builder);
 
     /* initialize connectors */
