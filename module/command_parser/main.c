@@ -4,21 +4,20 @@
 #include "header.h"
 #include "command_parser.h"
 
-extern int construct_command(char c);
+extern int construct_command(char c, char *command_buf);
 
 int main(int argc, char *argv[])
 {
     int c;
-    int flag = 0;
 
     while ((c = getchar()) != EOF)
     {
-        flag = construct_command(c);
+        command_len = construct_command(c, command_buf);
 
-        if (flag)
+        if (command_len)
         {
-            flag = 0;
             parse_command(command_buf, command_len);
+            command_len = 0;
         }
     }
 
