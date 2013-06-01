@@ -11,14 +11,18 @@
 #include "rcc.h"
 #include "config.h"
 #include "command.h"
+#include "motor.h"
+#include "holder.h"
 
 int main(void)
 {
 	RCC_Config();
 	NVIC_Config();
 	USART_Config();
+	Motor_Init();
+	Holder_Init();
 
-	USART_SendString(USART1, "JoyCar Project\r\n");
+//	USART_SendString(USART1, "JoyCar Project\r\n");
 
 	while (1)	   
 	{

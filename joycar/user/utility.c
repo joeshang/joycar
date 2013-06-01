@@ -8,4 +8,5 @@
 
 int atoi(char *string)
 {
+	return 0;
 }

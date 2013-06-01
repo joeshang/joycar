@@ -3,9 +3,12 @@
  * Author: Joe Shang
  * Description: The driver of Motor.
  */
- 
-#include "motor.h"
+
 #include "stm32f10x.h"
+#include "motor.h"
+#include "usart.h"
+#include "utility.h"
+
 
 enum
 {
@@ -28,10 +31,10 @@ static int motor_left_run_pulse;
 static int motor_right_run_pulse;
 static int motor_run_speed[MOTOR_SPEED_LEVEL_MAX + 1][MOTOR_CNT] = 
 {
-    {0, 0},     /* Speed Level 0 */
-    {0, 0},     /* Speed Level 1 */
-    {0, 0},     /* Speed Level 2 */
-    {0, 0}      /* Speed Level 3 */
+    {2600, 2500},     /* Speed Level 0 */
+    {3600, 3500},     /* Speed Level 1 */
+    {4600, 4500},     /* Speed Level 2 */
+    {5600, 5500}      /* Speed Level 3 */
 };
  
 static void Motor_GPIO_Init()
@@ -39,8 +42,9 @@ static void Motor_GPIO_Init()
     GPIO_InitTypeDef GPIO_InitStructure;
 
     /* motor gpio clock setting */
-    RCC_APB1PeriphClockCmd(RCC_APB_MOTOR_LEFT_FW | RCC_APB_MOTOR_LEFT_INV |
-            RCC_APB_MOTOR_RIGHT_FW | RCC_APB_MOTOR_RIGHT_INV, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB_MOTOR_LEFT_FW | RCC_APB_MOTOR_LEFT_INV |
+            RCC_APB_MOTOR_RIGHT_FW | RCC_APB_MOTOR_RIGHT_INV |RCC_APB2Periph_AFIO, ENABLE);
+    GPIO_PinRemapConfig(GPIO_FullRemap_TIM3, ENABLE);
 
     /* left motor forward gpio */
     GPIO_InitStructure.GPIO_Pin = MOTOR_LEFT_FW_Pin;
@@ -116,7 +120,7 @@ void Motor_Init()
     Motor_PWM_Init();
 
     motor_state = MOTOR_STATE_STOP;
-    motor_left_run_pulse = motor_run_speed[MOTOR_SPEEP_LEVEL_INIT][MOTOR_LEFT];
+    motor_left_run_pulse = motor_run_speed[MOTOR_SPEED_LEVEL_INIT][MOTOR_LEFT];
     motor_right_run_pulse = motor_run_speed[MOTOR_SPEED_LEVEL_INIT][MOTOR_RIGHT];
 }
 
@@ -151,12 +155,13 @@ void Motor_TurnLeft()
     motor_state = MOTOR_STATE_TURNLEFT;
 
     /* left motor */
-    TIM_SetCompare1(MOTOR_TIM, MOTOR_LEFT_TURN_PULSE);
+	TIM_SetCompare1(MOTOR_TIM, 0);
     TIM_SetCompare2(MOTOR_TIM, 0);
 
     /* right motor */
-    TIM_SetCompare3(MOTOR_TIM, 0);
-    TIM_SetCompare4(MOTOR_TIM, MOTOR_RIGHT_TURN_PULSE);
+	TIM_SetCompare3(MOTOR_TIM, MOTOR_RIGHT_TURN_PULSE);
+    TIM_SetCompare4(MOTOR_TIM, 0);
+    
 }
 
 void Motor_TurnRight()
@@ -164,11 +169,11 @@ void Motor_TurnRight()
     motor_state = MOTOR_STATE_TURNRIGHT;
 
     /* left motor */
-    TIM_SetCompare1(MOTOR_TIM, 0);
-    TIM_SetCompare2(MOTOR_TIM, MOTOR_LEFT_TURN_PULSE);
+    TIM_SetCompare1(MOTOR_TIM, MOTOR_LEFT_TURN_PULSE);
+    TIM_SetCompare2(MOTOR_TIM, 0);
 
     /* right motor */
-    TIM_SetCompare3(MOTOR_TIM, MOTOR_RIGHT_TURN_PULSE);
+    TIM_SetCompare3(MOTOR_TIM, 0);
     TIM_SetCompare4(MOTOR_TIM, 0);
 }
 
@@ -189,8 +194,8 @@ void Motor_SetSpeed(char *speed)
 {
     int speed_level;
 
-    speed_level = atoi(speed);
-    if (speed_level < 0 || speed_level > MOTOR_SPEEP_LEVEL_MAX)
+    speed_level = speed[0] - '0';
+    if (speed_level < 0 || speed_level > MOTOR_SPEED_LEVEL_MAX)
     {
         return;
     }

@@ -13,39 +13,39 @@
  * Motor Configuration
  ************************************************************/
 /* Motor GPIO Setting */
-#define MOTOR_TIM
-#define RCC_APB_MOTOR_TIM
+#define MOTOR_TIM					TIM3
+#define RCC_APB_MOTOR_TIM			RCC_APB1Periph_TIM3    //TIM ±÷” πƒ‹	
 
-#define RCC_APB_MOTOR_LEFT_FW
-#define MOTOR_LEFT_FW_GPIO
-#define MOTOR_LEFT_FW_Pin
+#define RCC_APB_MOTOR_LEFT_FW  		RCC_APB2Periph_GPIOC
+#define MOTOR_LEFT_FW_GPIO			GPIOC
+#define MOTOR_LEFT_FW_Pin			GPIO_Pin_6
 
-#define RCC_APB_MOTOR_LEFT_INV
-#define MOTOR_LEFT_INV_GPIO
-#define MOTOR_LEFT_INV_Pin
+#define RCC_APB_MOTOR_LEFT_INV		RCC_APB2Periph_GPIOC
+#define MOTOR_LEFT_INV_GPIO			GPIOC
+#define MOTOR_LEFT_INV_Pin			GPIO_Pin_7
 
-#define RCC_APB_MOTOR_RIGHT_FW
-#define MOTOR_RIGHT_FW_GPIO
-#define MOTOR_RIGHT_FW_Pin
+#define RCC_APB_MOTOR_RIGHT_FW		RCC_APB2Periph_GPIOC
+#define MOTOR_RIGHT_FW_GPIO			GPIOC
+#define MOTOR_RIGHT_FW_Pin			GPIO_Pin_8
 
-#define RCC_APB_MOTOR_RIGHT_INV
-#define MOTOR_RIGHT_INV_GPIO
-#define MOTOR_RIGHT_INV_Pin
+#define RCC_APB_MOTOR_RIGHT_INV		RCC_APB2Periph_GPIOC
+#define MOTOR_RIGHT_INV_GPIO		GPIOC
+#define MOTOR_RIGHT_INV_Pin			GPIO_Pin_9
 
 /* Motor PWM Setting */
-#define MOTOR_PERIOD
-#define MOTOR_PRESCALER
+#define MOTOR_PERIOD				7200
+#define MOTOR_PRESCALER				1
 
-#define MOTOR_SPEED_LEVEL_INIT
-#define MOTOR_SPEED_LEVEL_MAX
+#define MOTOR_SPEED_LEVEL_INIT		2
+#define MOTOR_SPEED_LEVEL_MAX		3
 
-#define MOTOR_LEFT_TURN_PULSE
-#define MOTOR_RIGHT_TURN_PULSE
+#define MOTOR_LEFT_TURN_PULSE		2500
+#define MOTOR_RIGHT_TURN_PULSE		2500
 
 /************************************************************
  * Motor Interface
  ************************************************************/
-void Motor_Init(void);
+extern void Motor_Init(void);
 
 void Motor_Forward(void);
 void Motor_Backward(void);
