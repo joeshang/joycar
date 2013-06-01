@@ -1,10 +1,10 @@
 CC = gcc
 CFLAGS = -g -Wall
 TARGETS = server
-OBJS = server.o
+OBJS = server.o command_extractor.o command_parser.o
 
 $(TARGETS):$(OBJS)
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $^
 
 %.o:%.c
 	$(CC) $(CFLAGS) -c $<

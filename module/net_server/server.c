@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "command.h"
+
 #define BACKLOG             5
 #define BUF_SIZE            1024
 
@@ -77,6 +79,8 @@ int main(int argc, char **argv)
                 exit(EXIT_FAILURE);
             }
         }
+        inet_ntop(AF_INET, &client_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
+        printf("client(%s) connected\n", disp_addr_str);
 
         for (;;)
         {
@@ -84,6 +88,7 @@ int main(int argc, char **argv)
             {
                 if (recv_size == 0)
                 {
+                    printf("client exit\n");
                     break;
                 }
                 else
@@ -92,8 +97,10 @@ int main(int argc, char **argv)
                     exit(EXIT_FAILURE);
                 }
             }
+            command_buf[recv_size] = '\0';
 
-            printf("command: %s\n", command_buf);
+            printf("command(length = %d): %s\n", recv_size, command_buf);
+            extract_command(command_buf);
         }
     }
 
