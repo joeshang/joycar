@@ -84,10 +84,29 @@ static inline Ret connector_destroy(Connector *thiz)
     return RET_OK;
 }
 
+static inline void event_null_func(void *data, void *ctx)
+{
+}
+
+static inline Ret connector_event_init(Connector *thiz)
+{
+    EventListener null_event_listener =
+    {
+        .cb_func = event_null_func,
+        .ctx = NULL
+    };
+
+    thiz->open_listener = null_event_listener;
+    thiz->close_listener = null_event_listener;
+    thiz->read_listener = null_event_listener;
+
+    return RET_OK;
+}
+
 static inline Ret connector_event_listener_set(Connector *thiz, EventType event, EventListener *listener)
 {
     Ret ret;
-    return_val_if_fail(thiz != NULL && event < EVENT_TYPE_END, RET_INVALID_PARAMS);
+    return_val_if_fail(thiz != NULL && event < EVENT_TYPE_END && listener->cb_func != NULL, RET_INVALID_PARAMS);
     
     switch (event)
     {

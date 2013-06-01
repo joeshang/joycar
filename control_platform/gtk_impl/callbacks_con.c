@@ -1,5 +1,5 @@
 /**
- * File: con_callbacks.c
+ * File: callbacks_con.c
  * Author: Joe Shang
  * Brief: The callback handlers of communication programs.
  */
@@ -7,7 +7,7 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 
-#include "con_callbacks.h"
+#include "callbacks_con.h"
 
 void connector_open_callback(void *data, void *ctx)
 {
@@ -20,6 +20,8 @@ void connector_open_callback(void *data, void *ctx)
 
     if (data == NULL) /* open success */
     {
+        fprintf(stderr, "open success\n");
+
         disconnect_btn = GTK_WIDGET(gtk_builder_get_object(builder, "disconnect_btn"));
         gtk_widget_set_sensitive(disconnect_btn, TRUE);
 

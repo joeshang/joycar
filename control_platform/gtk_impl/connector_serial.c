@@ -40,10 +40,8 @@ static void *serial_thread_handler(void *arg)
     printf("open serial: %s\n", priv->serial_port);
     if ((priv->fd = open(priv->serial_port, O_RDWR | O_NOCTTY)) == -1)
     {
-        if (listener.cb_func != NULL)
-        {
-            listener.cb_func(strerror(errno), listener.ctx);
-        }
+        listener.cb_func(strerror(errno), listener.ctx);
+
         perror("open serial fail");
         pthread_exit(NULL);
     }
@@ -54,10 +52,7 @@ static void *serial_thread_handler(void *arg)
 
     priv->status = 1;
 
-    if (listener.cb_func != NULL)
-    {
-        listener.cb_func(NULL, listener.ctx);
-    }
+    listener.cb_func(NULL, listener.ctx);
 
     pthread_exit(NULL);
 }
@@ -121,6 +116,8 @@ Connector *connector_serial_create()
         thiz->close = connector_serial_close;
         thiz->send = connector_serial_send;
         thiz->destroy = connector_serial_destroy;
+
+        connector_event_init(thiz);
     }
 
     return thiz;

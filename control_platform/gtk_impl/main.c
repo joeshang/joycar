@@ -9,7 +9,7 @@
 #include "connector.h"
 #include "connector_net.h"
 #include "connector_serial.h"
-#include "con_callbacks.h"
+#include "callbacks_con.h"
 
 #define GLADE_FILE  "gui/joycar.glade"
 

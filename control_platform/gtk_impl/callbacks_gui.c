@@ -1,5 +1,5 @@
 /**
- * File: gui_callbacks.c
+ * File: callbacks_gui.c
  * Author: Joe Shang
  * Brief: The callback handlers of gui programs.
  */
