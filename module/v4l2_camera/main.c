@@ -5,7 +5,6 @@
  */
 
 #include <stdio.h>
-#include <pthread.h>
 #include <gtk/gtk.h>
 #include <cairo.h>
 
@@ -26,7 +25,7 @@ static void process_image(void *ctx, void *buf_start, int buf_size)
     
     yuv422_rgb24(buf_start, rgb_buf, DEV_WIDTH, DEV_HEIGHT);
 
-    cr = gdk_cairo_create(drawing_area->window);
+    cr = gdk_cairo_create(gtk_widget_get_window(drawing_area));
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((const guchar *)rgb_buf, 
             GDK_COLORSPACE_RGB, 
             FALSE,
@@ -101,7 +100,7 @@ int main(int argc, char *argv[])
     video_init_device();
     video_start_capture();
 
-    gtk_idle_add((GSourceFunc)refresh_ui, drawing_area);
+    g_idle_add((GSourceFunc)refresh_ui, drawing_area);
 
     gtk_main();
 
