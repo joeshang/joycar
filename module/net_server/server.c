@@ -3,14 +3,42 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
+
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "command.h"
+#include "capture.h"
 
 #define BACKLOG             5
 #define BUF_SIZE            1024
+
+static pthread_t capture_tid;
+
+static void process_image(void *ctx, void *buf_start, int buf_size)
+{
+    int client_socket = (int)ctx;
+
+    send(client_socket, buf_start, buf_size, 0);
+}
+
+static void *capture_thread(void *user_data)
+{
+    pthread_detach(pthread_self());
+
+    /* video capturing module */
+    for (;;)
+    {
+        if (video_is_read_ready())
+        {
+            video_read_frame(user_data, process_image);
+        }
+    }
+
+    return NULL;
+}
 
 int main(int argc, char **argv)
 {
@@ -64,6 +92,10 @@ int main(int argc, char **argv)
     inet_ntop(AF_INET, &disp_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
     printf("server is listening at %s:%d\n", disp_addr_str, ntohs(disp_addr.sin_port));
 
+    video_open_device();
+    video_init_device();
+    video_start_capture();
+
     for (;;)
     {
         client_addr_len = sizeof(client_addr);
@@ -82,6 +114,9 @@ int main(int argc, char **argv)
         inet_ntop(AF_INET, &client_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
         printf("client(%s) connected\n", disp_addr_str);
 
+        pthread_create(&capture_tid, NULL, capture_thread, (void *)connect_socket);
+
+        /* command parsing module */
         for (;;)
         {
             if ((recv_size = recv(connect_socket, command_buf, BUF_SIZE, 0)) <= 0)
@@ -89,6 +124,9 @@ int main(int argc, char **argv)
                 if (recv_size == 0)
                 {
                     printf("client exit\n");
+
+                    pthread_cancel(capture_tid);
+                
                     break;
                 }
                 else
@@ -103,6 +141,10 @@ int main(int argc, char **argv)
             extract_command(command_buf);
         }
     }
+
+    video_stop_capture();
+    video_deinit_device();
+    video_close_device();
 
     close(listen_socket);
 

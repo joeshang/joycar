@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -pthread
 TARGETS = server
-OBJS = server.o command_extractor.o command_parser.o
+OBJS = server.o command_extractor.o command_parser.o capture.o
 
 $(TARGETS):$(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
