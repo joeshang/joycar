@@ -20,7 +20,10 @@ static pthread_t capture_tid;
 static void process_image(void *ctx, void *buf_start, int buf_size)
 {
     int client_socket = (int)ctx;
+    int data_type = 1;
 
+    send(client_socket, (void *)&data_type, sizeof(int), 0);
+    send(client_socket, (void *)&buf_size, sizeof(int), 0);
     send(client_socket, buf_start, buf_size, 0);
 }
 
