@@ -1,12 +1,14 @@
 /**
- * File: client.c
+ * File: main.c
  * Author: Joe Shang
  * Brief:
  */
 
-#include <stdio.h>
 #include <gtk/gtk.h>
 #include <cairo.h>
+
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "capture.h"
 #include "yuv422_rgb.h"
@@ -22,7 +24,7 @@ static void process_image(void *ctx, void *buf_start, int buf_size)
 {
     cairo_t *cr;
     GtkWidget *drawing_area = (GtkWidget *)ctx;
-    
+
     yuv422_rgb24(buf_start, rgb_buf, DEV_WIDTH, DEV_HEIGHT);
 
     cr = gdk_cairo_create(gtk_widget_get_window(drawing_area));
@@ -51,7 +53,7 @@ static void process_image(void *ctx, void *buf_start, int buf_size)
     cairo_destroy(cr);
 }
 
-gboolean refresh_ui(gpointer user_data)
+static gboolean refresh_ui(gpointer user_data)
 {
     if (video_is_read_ready())
     {
@@ -61,7 +63,7 @@ gboolean refresh_ui(gpointer user_data)
     return TRUE;
 }
 
-void destroy_handler(GtkWidget *widget, gpointer data)
+static void destroy_handler(GtkWidget *widget, gpointer data)
 {
     printf("enter destroy handler\n");
 
@@ -77,6 +79,12 @@ int main(int argc, char *argv[])
     GtkWidget *window;
     GtkWidget *vbox;
     GtkWidget *drawing_area;
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s dev_name\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
 
     gtk_init(&argc, &argv);
 
@@ -96,7 +104,7 @@ int main(int argc, char *argv[])
 
     gtk_widget_show_all(window);
 
-    video_open_device();
+    video_open_device(argv[1]);
     video_init_device();
     video_start_capture();
 
