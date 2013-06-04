@@ -12,6 +12,7 @@
 DECLS_BEGIN
 
 void connector_open_callback(void *data, void *ctx);
+void connector_close_callback(void *data, void *ctx);
 
 DECLS_END
 

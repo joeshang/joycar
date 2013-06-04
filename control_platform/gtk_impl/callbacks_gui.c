@@ -12,16 +12,16 @@
 #include "connector_net.h"
 #include "connector_serial.h"
 
+#include "callbacks_con.h"
+
 enum CON_TYPE
 {
     CON_SERIAL,
     CON_NET
 };
 
-extern Connector* net_connector;
-extern Connector* serial_connector;
-
-static Connector *con = NULL;
+Connector* active_connector = NULL;
+static int saved_con_type = CON_SERIAL;
 
 /***********************************************************
 *                   Main Window Related                    *
@@ -31,14 +31,9 @@ void on_main_window_destroy(GtkWidget *widget, gpointer user_data)
     GtkBuilder *builder = (GtkBuilder *)user_data;
     g_object_unref(G_OBJECT(builder));
 
-    if (serial_connector != NULL)
+    if (active_connector != NULL)
     {
-        connector_destroy(serial_connector);
-    }
-
-    if (net_connector != NULL)
-    {
-        connector_destroy(net_connector);
+        connector_destroy(active_connector);
     }
 
     gtk_main_quit();
@@ -90,7 +85,10 @@ static void on_serial_connection_open(GtkBuilder *builder)
 
     if (serial_port != NULL && baud_rate != NULL)
     {
-        connector_open(con, &con_arg);
+        connector_open(active_connector, 
+                &con_arg, 
+                connector_open_callback, 
+                (void *)builder);
     }
     else
     {
@@ -124,7 +122,10 @@ static void on_net_connection_open(GtkBuilder *builder)
     
     if (addr != NULL && port != NULL)
     {
-        connector_open(con, &con_arg);
+        connector_open(active_connector,
+                &con_arg,
+                connector_open_callback,
+                (void *)builder);
     }
     else
     {
@@ -142,15 +143,28 @@ void on_connect_btn_clicked(GtkWidget *widget, gpointer user_data)
     con_notebook = GTK_NOTEBOOK(gtk_builder_get_object(builder, "config_notebook"));
     sel_con_type = gtk_notebook_get_current_page(con_notebook);
 
+    if (active_connector != NULL && saved_con_type != sel_con_type)
+    {
+        connector_destroy(active_connector);
+        active_connector = NULL;
+    }
+    saved_con_type = sel_con_type;
+
     switch (sel_con_type)
     {
         case CON_SERIAL:
-            con = serial_connector;
+            if (active_connector == NULL)
+            {
+                active_connector = connector_serial_create();
+            }
             on_serial_connection_open(builder);
             printf("Connection with serial\n");
             break;
         case CON_NET:
-            con = net_connector;
+            if (active_connector == NULL)
+            {
+                active_connector = connector_net_create();
+            }
             on_net_connection_open(builder);
             printf("Connection with network\n");
             break;
@@ -166,7 +180,7 @@ void on_disconnect_btn_clicked(GtkWidget *widget, gpointer user_data)
     GtkWidget *disconnect_btn;
     GtkImage *status_img;
 
-    connector_close(con);
+    connector_close(active_connector, connector_close_callback, NULL);
 
     disconnect_btn = GTK_WIDGET(gtk_builder_get_object(builder, "disconnect_btn"));
     gtk_widget_set_sensitive(disconnect_btn, FALSE);
@@ -184,31 +198,31 @@ void on_disconnect_btn_clicked(GtkWidget *widget, gpointer user_data)
 void on_motor_forward_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[mf]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_motor_backward_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[mb]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_motor_turnleft_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[ml]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_motor_turnright_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[mr]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_motor_btn_released(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[mt]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_motor_speed_spin_value_changed(GtkWidget *widget, gpointer user_data)
@@ -219,7 +233,7 @@ void on_motor_speed_spin_value_changed(GtkWidget *widget, gpointer user_data)
     printf("motor speed %d\n", (int)speed);
     
     sprintf(msg_buf, "[ms%d]", (int)speed);
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 /***********************************************************
@@ -228,31 +242,31 @@ void on_motor_speed_spin_value_changed(GtkWidget *widget, gpointer user_data)
 void on_holder_turnup_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[hu]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_holder_turndown_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[hd]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_holder_turnleft_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[hl]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_holder_turnright_btn_pressed(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[hr]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_holder_btn_released(GtkWidget *widget, gpointer user_data)
 {
     char *msg_buf = "[ht]";
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 
 void on_holder_speed_spin_value_changed(GtkWidget *widget, gpointer user_data)
@@ -264,6 +278,6 @@ void on_holder_speed_spin_value_changed(GtkWidget *widget, gpointer user_data)
     printf("holder speed %d\n", (int)speed);
 
     sprintf(msg_buf, "[hs%d]", (int)speed);
-    connector_send(con, msg_buf, strlen(msg_buf));
+    connector_send(active_connector, msg_buf, strlen(msg_buf));
 }
 

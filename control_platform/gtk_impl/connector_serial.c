@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
-#include <pthread.h>
 #include "connector.h"
 #include "serial_driver.h"
 #include "connector_serial.h"
@@ -26,41 +25,15 @@ typedef struct _PrivInfo
     int baud_rate;
     char *serial_port;
 
-    int status;
+    int connect_status;
 }PrivInfo;
 
-static pthread_t serial_pid;
-
-static void *serial_thread_handler(void *arg)
-{
-    Connector *thiz = (Connector *)arg;
-    EventListener listener = thiz->open_listener;
-    PrivInfo *priv = (PrivInfo *)thiz->priv;
-
-    printf("open serial: %s\n", priv->serial_port);
-    if ((priv->fd = open(priv->serial_port, O_RDWR | O_NOCTTY)) == -1)
-    {
-        listener.cb_func(strerror(errno), listener.ctx);
-
-        perror("open serial fail");
-        pthread_exit(NULL);
-    }
-
-    serial_set_raw_mode(priv->fd);
-    serial_set_speed(priv->fd, priv->baud_rate);
-    serial_set_parity(priv->fd, DATA_BITS, PARITY_TYPE, STOP_BITS);
-
-    priv->status = 1;
-
-    listener.cb_func(NULL, listener.ctx);
-
-    pthread_exit(NULL);
-}
-
-static Ret connector_serial_open(Connector *thiz, void *arg)
+static Ret connector_serial_open(Connector *thiz, void *arg, CallbackFunc cb_func, void *ctx)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
     SerialArg *serial_arg = (SerialArg *)arg;
+
+    return_val_if_fail(cb_func != NULL, RET_INVALID_PARAMS);
 
     priv->baud_rate = serial_arg->baud_rate;
     if (priv->serial_port != NULL)
@@ -70,33 +43,69 @@ static Ret connector_serial_open(Connector *thiz, void *arg)
     priv->serial_port = (char *)malloc(strlen(serial_arg->serial_port) + 1);
     strcpy(priv->serial_port, serial_arg->serial_port);
 
-    pthread_create(&serial_pid, NULL, serial_thread_handler, (void *)thiz);
+    printf("open serial: %s\n", priv->serial_port);
+    if ((priv->fd = open(priv->serial_port, O_RDWR | O_NOCTTY)) == -1)
+    {
+        cb_func(strerror(errno), ctx);
+        
+        perror("open serial fail");
+
+        return RET_FAIL;
+    }
+
+    serial_set_raw_mode(priv->fd);
+    serial_set_speed(priv->fd, priv->baud_rate);
+    serial_set_parity(priv->fd, DATA_BITS, PARITY_TYPE, STOP_BITS);
+
+    priv->connect_status = 1;
+
+    cb_func(NULL, ctx);
     
     return RET_OK;
 }
 
-static Ret connector_serial_close(Connector *thiz)
+static Ret connector_serial_close(Connector *thiz, CallbackFunc cb_func, void *ctx)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
-    priv->status = 0;
+
+    return_val_if_fail(cb_func != NULL, RET_INVALID_PARAMS);
+
+    priv->connect_status = 0;
     close(priv->fd); 
+    
+    cb_func(NULL, ctx);
 
     return RET_OK;
 }
 
-static void connector_serial_send(Connector *thiz, void *buf, size_t size)
+static int connector_serial_send(Connector *thiz, void *buf, size_t size)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
 
-    if (priv->status)
+    if (priv->connect_status)
     {
-        write(priv->fd, buf, size);
+        return write(priv->fd, buf, size);
     }
+
+    return -1;
+}
+
+static int connector_serial_recv(Connector *thiz, void *buf, size_t size)
+{
+    PrivInfo *priv = (PrivInfo *)thiz->priv;
+
+    if (priv->connect_status)
+    {
+        return read(priv->fd, buf, size);
+    }
+
+    return -1;
 }
 
 static void connector_serial_destroy(Connector *thiz)
 {
     PrivInfo *priv = (PrivInfo *)thiz->priv;
+
     free(priv->serial_port);
     free(thiz);
 }
@@ -110,14 +119,13 @@ Connector *connector_serial_create()
         PrivInfo *priv = (PrivInfo *)thiz->priv;
         priv->serial_port = NULL;
         priv->baud_rate = 9600;
-        priv->status = 0;
+        priv->connect_status = 0;
 
         thiz->open = connector_serial_open;
         thiz->close = connector_serial_close;
         thiz->send = connector_serial_send;
+        thiz->recv = connector_serial_recv;
         thiz->destroy = connector_serial_destroy;
-
-        connector_event_init(thiz);
     }
 
     return thiz;
