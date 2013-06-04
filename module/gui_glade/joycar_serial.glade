@@ -165,10 +165,10 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="model">port_liststore</property>
+                                <property name="active">0</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cellrenderertext1"/>
                                   <attributes>
-                                    <attribute name="visible">0</attribute>
                                     <attribute name="text">0</attribute>
                                   </attributes>
                                 </child>
@@ -198,6 +198,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
                                 <property name="model">rate_liststore</property>
+                                <property name="active">0</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cellrenderertext2"/>
                                   <attributes>
