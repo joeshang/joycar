@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,7 +20,7 @@
 
 #include "yuv422_rgb.h"
 
-#define DEBUG
+//#define DEBUG
 
 #define DEV_WIDTH       320
 #define DEV_HEIGHT      240
@@ -31,11 +32,15 @@
 #define BUF_SIZE        4096
 
 int sockfd;
+pthread_t capture_tid;
+
 unsigned char rgb_buf[DEV_WIDTH * DEV_HEIGHT * 3];
 char video_buf[DEV_WIDTH * DEV_HEIGHT * 2];
 
 static void refresh_video_area(GtkWidget *drawing_area)
 {
+    gdk_threads_enter();
+
     cairo_t *cr = gdk_cairo_create(gtk_widget_get_window(drawing_area));
 
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((const guchar *)rgb_buf, 
@@ -61,6 +66,8 @@ static void refresh_video_area(GtkWidget *drawing_area)
     }
 
     cairo_destroy(cr);
+
+    gdk_threads_leave();
 }
 
 static gboolean video_data_handler(gpointer user_data)
@@ -124,46 +131,47 @@ static gboolean video_data_handler(gpointer user_data)
     return TRUE;
 }
 
-static gboolean recv_handler(gpointer user_data)
+static void *recv_handler(void *user_data)
 {
     int type;
     gboolean ret = TRUE;
 
+    pthread_detach(pthread_self());
+
+    for (;;)
+    {
+        if (recv(sockfd, (void *)&type, sizeof(int), 0) <= 0)
+        {
+            break;
+        }
+
 #ifdef DEBUG
-    printf("enter recv_handler\n");
+        printf("data type: %d\n", type);
 #endif
 
-    if (recv(sockfd, (void *)&type, sizeof(int), 0) <= 0)
-    {
-        return FALSE;
+        switch (type)
+        {
+            case 1:
+                ret = video_data_handler(user_data);
+                break;
+            default:
+                fprintf(stderr, "unknown data type\n");
+                break;
+        }
+
+        if (!ret)
+        {
+            break;
+        }
     }
 
-#ifdef DEBUG
-    printf("data type: %d\n", type);
-#endif
-
-    switch (type)
-    {
-        case 1:
-            ret = video_data_handler(user_data);
-            break;
-        default:
-            fprintf(stderr, "unknown data type\n");
-            break;
-    }
-
-#ifdef DEBUG
-    printf("exit recv_handler with ret[%d]\n", ret);
-#endif
-
-    return ret;
+    return NULL;
 }
 
 void destroy_handler(GtkWidget *widget, gpointer data)
 {
-    printf("enter destroy handler\n");
-    
     close(sockfd);
+    pthread_cancel(capture_tid);
 
     gtk_main_quit();
 }
@@ -181,6 +189,13 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Usage: %s addr port\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    if (!g_thread_supported())
+    {
+        g_thread_init(NULL);
+    }
+    gdk_threads_init();
+    gdk_threads_enter();
 
     gtk_init(&argc, &argv);
 
@@ -216,9 +231,10 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    g_idle_add((GSourceFunc)recv_handler, drawing_area);
+    pthread_create(&capture_tid, NULL, recv_handler, drawing_area);
 
     gtk_main();
+    gdk_threads_leave();
 
     return 0;
 }
