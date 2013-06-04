@@ -56,9 +56,9 @@ int main(int argc, char **argv)
     int recv_size;
     char command_buf[BUF_SIZE];
 
-    if (argc != 2)
+    if (argc != 3)
     {
-        fprintf(stderr, "Usage: %s port\n", argv[0]);
+        fprintf(stderr, "Usage: %s device port\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     bzero(&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(atoi(argv[1]));
+    serv_addr.sin_port = htons(atoi(argv[2]));
 
     if (bind(listen_socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
     {
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     inet_ntop(AF_INET, &disp_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
     printf("server is listening at %s:%d\n", disp_addr_str, ntohs(disp_addr.sin_port));
 
-    video_open_device();
+    video_open_device(argv[1]);
     video_init_device();
     video_start_capture();
 

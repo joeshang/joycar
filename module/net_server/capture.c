@@ -73,7 +73,7 @@ static void video_req_buf_and_mmap()
 
     if (req.count < 2)
     {
-        fprintf(stderr, "insufficient buffer memory on %s\n", DEV_NAME);
+        fprintf(stderr, "insufficient buffer memory\n");
         exit(EXIT_FAILURE);
     }
 
@@ -121,11 +121,11 @@ static void video_req_buf_and_mmap()
     }
 }
 
-void video_open_device()
+void video_open_device(char *dev_name)
 {
-    if ((fd = open(DEV_NAME, O_RDWR | O_NONBLOCK, 0)) == -1)
+    if ((fd = open(dev_name, O_RDWR | O_NONBLOCK, 0)) == -1)
     {
-        fprintf(stderr, "can't open %s: %s\n", DEV_NAME, strerror(errno));
+        fprintf(stderr, "can't open %s: %s\n", dev_name, strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
