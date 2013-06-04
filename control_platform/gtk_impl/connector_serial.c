@@ -30,6 +30,7 @@ typedef struct _PrivInfo
 
 static Ret connector_serial_open(Connector *thiz, void *arg, CallbackFunc cb_func, void *ctx)
 {
+    StatusMessage status_msg;
     PrivInfo *priv = (PrivInfo *)thiz->priv;
     SerialArg *serial_arg = (SerialArg *)arg;
 
@@ -43,12 +44,12 @@ static Ret connector_serial_open(Connector *thiz, void *arg, CallbackFunc cb_fun
     priv->serial_port = (char *)malloc(strlen(serial_arg->serial_port) + 1);
     strcpy(priv->serial_port, serial_arg->serial_port);
 
-    printf("open serial: %s\n", priv->serial_port);
     if ((priv->fd = open(priv->serial_port, O_RDWR | O_NOCTTY)) == -1)
     {
-        cb_func(strerror(errno), ctx);
-        
-        perror("open serial fail");
+        sprintf(status_msg.msg, "open serial failed: %s", strerror(errno));
+        status_msg.status = STATUS_TYPE_ERR;
+
+        cb_func((void *)&status_msg, ctx);
 
         return RET_FAIL;
     }
@@ -59,13 +60,16 @@ static Ret connector_serial_open(Connector *thiz, void *arg, CallbackFunc cb_fun
 
     priv->connect_status = 1;
 
-    cb_func(NULL, ctx);
+    sprintf(status_msg.msg, "connect %s successfully", priv->serial_port);
+    status_msg.status = STATUS_TYPE_OK;
+    cb_func((void *)&status_msg, ctx);
     
     return RET_OK;
 }
 
 static Ret connector_serial_close(Connector *thiz, CallbackFunc cb_func, void *ctx)
 {
+    StatusMessage status_msg;
     PrivInfo *priv = (PrivInfo *)thiz->priv;
 
     return_val_if_fail(cb_func != NULL, RET_INVALID_PARAMS);
@@ -73,7 +77,9 @@ static Ret connector_serial_close(Connector *thiz, CallbackFunc cb_func, void *c
     priv->connect_status = 0;
     close(priv->fd); 
     
-    cb_func(NULL, ctx);
+    sprintf(status_msg.msg, "disconnect %s successfully", priv->serial_port);
+    status_msg.status = STATUS_TYPE_OK;
+    cb_func((void *)&status_msg, ctx);
 
     return RET_OK;
 }

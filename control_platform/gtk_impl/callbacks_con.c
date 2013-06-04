@@ -22,6 +22,7 @@
 #define DISP_HEIGHT     240
 
 #define BUF_SIZE        4096
+#define STATUS_BAR_CTX  1
 
 extern Connector *active_connector;
 
@@ -152,8 +153,16 @@ static void *recv_handler(void *user_data)
     return NULL;
 }
 
+static void update_status_bar(GtkWidget *status_bar, char *msg)
+{
+    gtk_statusbar_pop(GTK_STATUSBAR(status_bar), STATUS_BAR_CTX);
+    gtk_statusbar_push(GTK_STATUSBAR(status_bar), STATUS_BAR_CTX, msg);
+    printf("%s\n", msg);
+}
+
 void connector_open_callback(void *data, void *ctx)
 {
+    StatusMessage *status_msg = (StatusMessage *)data;
     GtkBuilder *builder = (GtkBuilder *)ctx;
     GtkWidget *connect_btn;
     GtkWidget *disconnect_btn;
@@ -162,10 +171,10 @@ void connector_open_callback(void *data, void *ctx)
 
     printf("connector open callback: ");
 
-    if (data == NULL) /* open success */
-    {
-        fprintf(stderr, "open success\n");
+    update_status_bar(status_bar, status_msg->msg);
 
+    if (status_msg->status == STATUS_TYPE_OK)
+    {
         disconnect_btn = GTK_WIDGET(gtk_builder_get_object(builder, "disconnect_btn"));
         gtk_widget_set_sensitive(disconnect_btn, TRUE);
 
@@ -175,22 +184,18 @@ void connector_open_callback(void *data, void *ctx)
         status_img = GTK_IMAGE(gtk_builder_get_object(builder, "connect_status_img"));
         gtk_image_set_from_icon_name(status_img, "dialog-ok", GTK_ICON_SIZE_MENU);
 
-        gtk_statusbar_pop(GTK_STATUSBAR(status_bar), 0);
-
         pthread_create(&recv_tid, NULL, recv_handler, ctx);
-    }
-    else
-    {
-        /* TODO: handle open failed with error message in data */
-        fprintf(stderr, "%s\n", (char *)data);
-        
-        gtk_statusbar_pop(GTK_STATUSBAR(status_bar), 0);
-        gtk_statusbar_push(GTK_STATUSBAR(status_bar), 0, (const gchar *)data);
     }
 }
 
 void connector_close_callback(void *data, void *ctx)
 {
+    GtkBuilder *builder = (GtkBuilder *)ctx;
+    StatusMessage *status_msg = (StatusMessage *)data;
+    GtkWidget *status_bar = GTK_WIDGET(gtk_builder_get_object(builder, "statusbar"));
+
+    update_status_bar(status_bar, status_msg->msg);
+
     pthread_cancel(recv_tid);
 }
 

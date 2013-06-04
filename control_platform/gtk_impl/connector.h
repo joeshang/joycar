@@ -13,12 +13,17 @@
 
 DECLS_BEGIN
 
-typedef enum _EventType
+typedef enum _StatsType
 {
-    EVENT_TYPE_OPEN = 0,
-    EVENT_TYPE_CLOSE,
-    EVENT_TYPE_END
-}EventType;
+    STATUS_TYPE_OK,
+    STATUS_TYPE_ERR
+}StatusType;
+
+typedef struct _StatusMessage
+{
+    StatusType status;
+    char msg[100];
+}StatusMessage;
 
 struct _Connector;
 typedef struct _Connector Connector;

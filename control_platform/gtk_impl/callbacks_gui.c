@@ -153,20 +153,20 @@ void on_connect_btn_clicked(GtkWidget *widget, gpointer user_data)
     switch (sel_con_type)
     {
         case CON_SERIAL:
+            printf("\nConnection with serial\n");
             if (active_connector == NULL)
             {
                 active_connector = connector_serial_create();
             }
             on_serial_connection_open(builder);
-            printf("Connection with serial\n");
             break;
         case CON_NET:
+            printf("\nConnection with network\n");
             if (active_connector == NULL)
             {
                 active_connector = connector_net_create();
             }
             on_net_connection_open(builder);
-            printf("Connection with network\n");
             break;
         default:
             break;
@@ -180,7 +180,7 @@ void on_disconnect_btn_clicked(GtkWidget *widget, gpointer user_data)
     GtkWidget *disconnect_btn;
     GtkImage *status_img;
 
-    connector_close(active_connector, connector_close_callback, NULL);
+    connector_close(active_connector, connector_close_callback, user_data);
 
     disconnect_btn = GTK_WIDGET(gtk_builder_get_object(builder, "disconnect_btn"));
     gtk_widget_set_sensitive(disconnect_btn, FALSE);

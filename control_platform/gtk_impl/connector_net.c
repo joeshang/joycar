@@ -25,6 +25,7 @@ typedef struct _PrivInfo
 
 static Ret connector_net_open(Connector *thiz, void *arg, CallbackFunc cb_func, void *ctx)
 {
+    StatusMessage status_msg;
     NetworkArg *net_arg = (NetworkArg *)arg;
     PrivInfo *priv = (PrivInfo *)thiz->priv;
 
@@ -32,9 +33,11 @@ static Ret connector_net_open(Connector *thiz, void *arg, CallbackFunc cb_func, 
 
     if ((priv->socket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
-        cb_func(strerror(errno), ctx);
+        sprintf(status_msg.msg, "socket failed: %s", strerror(errno));
+        status_msg.status = STATUS_TYPE_ERR;
 
-        perror("socket failed");
+        cb_func((void *)&status_msg, ctx);
+
         return RET_FAIL;
     }
 
@@ -44,21 +47,27 @@ static Ret connector_net_open(Connector *thiz, void *arg, CallbackFunc cb_func, 
 
     if (connect(priv->socket, (struct sockaddr *)&priv->serv_addr, sizeof(priv->serv_addr)) == -1)
     {
-        cb_func(strerror(errno), ctx);
+        sprintf(status_msg.msg, "connect failed: %s", strerror(errno));
+        status_msg.status = STATUS_TYPE_ERR;
 
-        perror("connect failed");
+        cb_func((void *)&status_msg, ctx);
+
         return RET_FAIL;
     }
 
     priv->connect_status = 1;
 
-    cb_func(NULL, ctx);
+    sprintf(status_msg.msg, "connect %s(%d) successfully", net_arg->net_addr, net_arg->net_port);
+    status_msg.status = STATUS_TYPE_OK;
+    cb_func((void *)&status_msg, ctx);
 
     return RET_OK;
 }
 
 static Ret connector_net_close(Connector *thiz, CallbackFunc cb_func, void *ctx)
 {
+    char addr_buf[INET_ADDRSTRLEN];
+    StatusMessage status_msg;
     PrivInfo *priv = (PrivInfo *)thiz->priv;
 
     return_val_if_fail(cb_func != NULL, RET_INVALID_PARAMS);
@@ -66,7 +75,12 @@ static Ret connector_net_close(Connector *thiz, CallbackFunc cb_func, void *ctx)
     priv->connect_status = 0;
     close(priv->socket);
 
-    cb_func(NULL, ctx);
+    inet_ntop(AF_INET, &priv->serv_addr.sin_addr, addr_buf, INET_ADDRSTRLEN);
+    sprintf(status_msg.msg, "disconnect %s(%d) successfully",
+            addr_buf,
+            ntohs(priv->serv_addr.sin_port));
+    status_msg.status = STATUS_TYPE_OK;
+    cb_func((void *)&status_msg, ctx);
 
     return RET_OK;
 }
