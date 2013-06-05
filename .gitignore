@@ -1,0 +1,8 @@
+*.o
+*.bak
+*.swp
+*.dep
+*.uvopt
+joycar/tags
+joycar/project/list/
+joycar/project/obj/

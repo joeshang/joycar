@@ -1,7 +1,7 @@
 /**
  * @File: connector_serial.h
  * @Author: Joe Shang
- * @Brief: The communication module of JoyCar Control Platform.
+ * @Brief: The serial version of communication module.
  */
 
 #ifndef _CONNECTOR_SERIAL_H_

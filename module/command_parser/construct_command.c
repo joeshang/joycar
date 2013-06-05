@@ -1,3 +1,10 @@
+/**
+ * File: construct_command.c
+ * Author: Joe Shang
+ * Brief: Extract real command from command protocol string used for interrupt
+ *  handler(Do as less work as possible in interrupt handler).
+ */
+
 #include "header.h"
 
 enum

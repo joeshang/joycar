@@ -6,36 +6,33 @@
 
 #include <gtk/gtk.h>
 
-#include "connector.h"
-#include "connector_serial.h"
-#include "con_callbacks.h"
-
-Connector *con;
+#define GLADE_FILE  "gui/joycar.glade"
 
 int main(int argc, char *argv[])
 {
     GtkBuilder *builder;
     GtkWidget *main_window;
 
-    EventListener con_listener;
+    if (!g_thread_supported())
+    {
+        g_thread_init(NULL);
+    }
+    gdk_threads_init();
+    gdk_threads_enter();
 
     gtk_init(&argc, &argv);
 
+    /* load glade gui file and connect signal-callbacks */
     builder = gtk_builder_new();
-    gtk_builder_add_from_file(builder, "joycar_serial.glade", NULL);
+    gtk_builder_add_from_file(builder, GLADE_FILE, NULL);
     gtk_builder_connect_signals(builder, builder);
 
+    /* show the main window */
     main_window = GTK_WIDGET(gtk_builder_get_object(builder, "main_window"));
-    
-    con = connector_serial_create();
-
-    con_listener.cb_func = connector_open_callback;
-    con_listener.ctx = builder;
-    connector_event_listener_set(con, EVENT_TYPE_OPEN, &con_listener);
-
     gtk_widget_show(main_window);
 
     gtk_main();
+    gdk_threads_leave();
 
     return 0;
 }
