@@ -11,6 +11,12 @@
 
 #include "command.h"
 #include "capture.h"
+#include "serial.h"
+
+#define BAUD_RATE           9600
+#define DATA_BITS           8
+#define STOP_BITS           1
+#define PARITY_TYPE         'N'
 
 #define BACKLOG             5
 #define BUF_SIZE            1024
@@ -43,8 +49,19 @@ static void *capture_thread(void *user_data)
     return NULL;
 }
 
+static void command_callback(int status, void *command, void *ctx)
+{
+    int serial_fd = (int)ctx;
+
+    if (status == COMMAND_PASS)
+    {
+        write(serial_fd, command, strlen(command));
+    }
+}
+
 int main(int argc, char **argv)
 {
+    int serial_fd;
     int listen_socket;
     int connect_socket;
     socklen_t client_addr_len;
@@ -56,9 +73,9 @@ int main(int argc, char **argv)
     int recv_size;
     char command_buf[BUF_SIZE];
 
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "Usage: %s device port\n", argv[0]);
+        fprintf(stderr, "Usage: %s port camera_name serial_name\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -71,7 +88,7 @@ int main(int argc, char **argv)
     bzero(&serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(atoi(argv[2]));
+    serv_addr.sin_port = htons(atoi(argv[1]));
 
     if (bind(listen_socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
     {
@@ -95,9 +112,20 @@ int main(int argc, char **argv)
     inet_ntop(AF_INET, &disp_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
     printf("server is listening at %s:%d\n", disp_addr_str, ntohs(disp_addr.sin_port));
 
-    video_open_device(argv[1]);
+    /* camera device init */
+    video_open_device(argv[2]);
     video_init_device();
     video_start_capture();
+
+    /* serial device init */
+    if ((serial_fd = serial_open_device(argv[3])) == -1)
+    {
+        perror("open serial failed");
+        exit(EXIT_FAILURE);
+    }
+    serial_set_raw_mode(serial_fd);
+    serial_set_speed(serial_fd, BAUD_RATE);
+    serial_set_parity(serial_fd, DATA_BITS, PARITY_TYPE, STOP_BITS);
 
     for (;;)
     {
@@ -141,7 +169,8 @@ int main(int argc, char **argv)
             command_buf[recv_size] = '\0';
 
             printf("command(length = %d): %s\n", recv_size, command_buf);
-            extract_command(command_buf);
+
+            extract_command(command_buf, command_callback, (void *)serial_fd);
         }
     }
 

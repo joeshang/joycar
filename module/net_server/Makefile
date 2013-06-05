@@ -1,7 +1,11 @@
-CC = gcc
+CC = arm-linux-gcc
 CFLAGS = -g -Wall -pthread
 TARGETS = server
-OBJS = server.o command_extractor.o command_parser.o capture.o
+OBJS = server.o \
+	   command_extractor.o \
+	   command_parser.o \
+	   capture.o \
+	   serial.o
 
 $(TARGETS):$(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
