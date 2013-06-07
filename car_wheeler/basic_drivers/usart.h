@@ -9,9 +9,11 @@
 
 #include "stm32f10x.h"
 
-void Usart_Initialization(void);
+void USART_Config(void);
 
-void Usart_SendChar(USART_TypeDef* USARTx, char data);
-char Usart_GetChar(USART_TypeDef* USARTx);
+void USART_SendChar(USART_TypeDef* USARTx, char data);
+char USART_GetChar(USART_TypeDef* USARTx);
+
+void USART_SendString(USART_TypeDef* USARTx, char* string);
 
 #endif

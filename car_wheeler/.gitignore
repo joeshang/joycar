@@ -3,5 +3,6 @@
 *.swp
 *.dep
 *.uvopt
+tags
 project/list/
 project/obj/
