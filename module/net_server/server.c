@@ -114,9 +114,12 @@ int main(int argc, char **argv)
 
     /* camera device init */
     video_open_device(argv[2]);
+    video_query_cap();
+    video_query_format();
     video_init_device();
     video_start_capture();
 
+#ifdef HAS_SERIAL
     /* serial device init */
     if ((serial_fd = serial_open_device(argv[3])) == -1)
     {
@@ -126,6 +129,9 @@ int main(int argc, char **argv)
     serial_set_raw_mode(serial_fd);
     serial_set_speed(serial_fd, BAUD_RATE);
     serial_set_parity(serial_fd, DATA_BITS, PARITY_TYPE, STOP_BITS);
+#else
+    serial_fd = fileno(stdout);
+#endif
 
     for (;;)
     {
@@ -179,6 +185,7 @@ int main(int argc, char **argv)
     video_close_device();
 
     close(listen_socket);
+    close(serial_fd);
 
     return 0;
 }

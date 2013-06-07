@@ -1,5 +1,5 @@
 /*
- * File: command_parser.c
+ * File: command_parser_stub.c
  * Author: Joe Shang
  * Description: The command parser program.
  */
