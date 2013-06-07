@@ -38,6 +38,7 @@ static int xioctl(int fd, int request, void *arg)
     return ret;
 }
 
+/* set the format of video device */
 static void video_set_format()
 {
     struct v4l2_format fmt;
@@ -55,12 +56,13 @@ static void video_set_format()
     }
 }
 
+/* Request video data buffers in kernel space and mmap buffers to user space */
 static void video_req_buf_and_mmap()
 {
     struct v4l2_requestbuffers req;
     memset(&req, 0, sizeof(req));
     
-    /* request buffers */
+    /* request buffers in kernel space */
     req.count  = REQ_BUF_CNT;
     req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     req.memory = V4L2_MEMORY_MMAP;
@@ -121,6 +123,7 @@ static void video_req_buf_and_mmap()
     }
 }
 
+/* open video device */
 void video_open_device(char *dev_name)
 {
     if ((fd = open(dev_name, O_RDWR | O_NONBLOCK, 0)) == -1)
@@ -130,12 +133,55 @@ void video_open_device(char *dev_name)
     }
 }
 
+void video_query_cap()
+{
+    struct v4l2_capability cap;
+
+    if (xioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
+    {
+        perror("");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("driver:\t\t%s\n", cap.driver);
+    printf("card:\t\t%s\n", cap.card);
+    printf("buf info:\t%s\n", cap.bus_info);
+    printf("version:\t%d\n", cap.version);
+    printf("capabilities:\t%x\n", cap.capabilities);
+
+    if ((cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == V4L2_CAP_VIDEO_CAPTURE)
+    {
+        printf("capabilities:\tsupport capture\n");
+    }
+
+    if ((cap.capabilities & V4L2_CAP_STREAMING) == V4L2_CAP_STREAMING)
+    {
+        printf("capabilities:\tsupport streaming\n");
+    }
+}
+
+void video_query_format()
+{
+    struct v4l2_fmtdesc fmtdesc;
+
+    memset(&fmtdesc, 0, sizeof(fmtdesc));
+    fmtdesc.index = 0;
+    fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    while (xioctl(fd, VIDIOC_ENUM_FMT, &fmtdesc) != -1)
+    {
+        printf("support format:\t%s\n", fmtdesc.description);
+        fmtdesc.index++;
+    }
+}
+
+/* initialize video device */
 void video_init_device()
 {
     video_set_format();
     video_req_buf_and_mmap();
 }
 
+/* device begin to capture */
 void video_start_capture()
 {
     int i;
@@ -167,6 +213,7 @@ void video_start_capture()
     }
 }
 
+/* read the frame of video from device buffer and handle it in callback function */
 void video_read_frame(void *ctx, VideoCallBack video_data_callback)
 {
     struct v4l2_buffer buf;
@@ -193,6 +240,7 @@ void video_read_frame(void *ctx, VideoCallBack video_data_callback)
     }
 }
 
+/* whether the device can read or not */
 int video_is_read_ready()
 {
     int sel_ret;
@@ -226,6 +274,7 @@ int video_is_read_ready()
     return 1;
 }
 
+/* device stop to capture */
 void video_stop_capture()
 {
     enum v4l2_buf_type type;
@@ -238,6 +287,7 @@ void video_stop_capture()
     }
 }
 
+/* deinitialize video device */
 void video_deinit_device()
 {
     int i;
@@ -253,6 +303,7 @@ void video_deinit_device()
     free(buffers);
 }
 
+/* close video device */
 void video_close_device()
 {
     if (close(fd) == -1)

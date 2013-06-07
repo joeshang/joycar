@@ -105,6 +105,8 @@ int main(int argc, char *argv[])
     gtk_widget_show_all(window);
 
     video_open_device(argv[1]);
+    video_query_cap();
+    video_query_format();
     video_init_device();
     video_start_capture();
 

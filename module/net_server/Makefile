@@ -1,4 +1,4 @@
-CC = arm-linux-gcc
+CC = gcc
 CFLAGS = -g -Wall -pthread
 TARGETS = server
 OBJS = server.o \
