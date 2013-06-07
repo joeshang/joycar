@@ -1,10 +1,11 @@
-CC = gcc
-CFLAGS = -g -Wall -pthread #-DHAS_SERIAL
-TARGETS = server
-OBJS = server.o \
+CC = arm-linux-gcc
+CFLAGS = -g -Wall -pthread -DDEBUG
+TARGETS = car_master
+OBJS = main.o \
 	   capture.o \
+	   serial.o \
 	   command_extractor.o \
-	   command_parser_stub.o
+	   command_parser.o
 
 $(TARGETS):$(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^

@@ -11,6 +11,7 @@
 
 #include "command.h"
 #include "capture.h"
+#include "serial.h"
 
 #define BAUD_RATE           9600
 #define DATA_BITS           8
@@ -50,14 +51,17 @@ static void *capture_thread(void *user_data)
 
 static void command_callback(int status, void *command, void *ctx)
 {
+    int serial_fd = (int)ctx;
+
     if (status == COMMAND_PASS)
     {
-        printf("pass command: %s\n", (char *)command);
+        write(serial_fd, command, strlen(command));
     }
 }
 
 int main(int argc, char **argv)
 {
+    int serial_fd;
     int listen_socket;
     int connect_socket;
     socklen_t client_addr_len;
@@ -69,9 +73,9 @@ int main(int argc, char **argv)
     int recv_size;
     char command_buf[BUF_SIZE];
 
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "Usage: %s port camera_name\n", argv[0]);
+        fprintf(stderr, "Usage: %s port camera_name serial_name\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -106,7 +110,9 @@ int main(int argc, char **argv)
     }
     char disp_addr_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &disp_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
+#ifdef DEBUG
     printf("server is listening at %s:%d\n", disp_addr_str, ntohs(disp_addr.sin_port));
+#endif
 
     /* camera device init */
     video_open_device(argv[2]);
@@ -114,6 +120,16 @@ int main(int argc, char **argv)
     video_query_format();
     video_init_device();
     video_start_capture();
+
+    /* serial device init */
+    if ((serial_fd = serial_open_device(argv[3])) == -1)
+    {
+        perror("open serial failed");
+        exit(EXIT_FAILURE);
+    }
+    serial_set_raw_mode(serial_fd);
+    serial_set_speed(serial_fd, BAUD_RATE);
+    serial_set_parity(serial_fd, DATA_BITS, PARITY_TYPE, STOP_BITS);
 
     for (;;)
     {
@@ -131,7 +147,9 @@ int main(int argc, char **argv)
             }
         }
         inet_ntop(AF_INET, &client_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
+#ifdef DEBUG
         printf("client(%s) connected\n", disp_addr_str);
+#endif
 
         pthread_create(&capture_tid, NULL, capture_thread, (void *)connect_socket);
 
@@ -156,9 +174,11 @@ int main(int argc, char **argv)
             }
             command_buf[recv_size] = '\0';
 
+#ifdef DEBUG
             printf("command(length = %d): %s\n", recv_size, command_buf);
+#endif
 
-            extract_command(command_buf, command_callback, NULL); 
+            extract_command(command_buf, command_callback, (void *)serial_fd);
         }
     }
 
@@ -167,6 +187,7 @@ int main(int argc, char **argv)
     video_close_device();
 
     close(listen_socket);
+    close(serial_fd);
 
     return 0;
 }
