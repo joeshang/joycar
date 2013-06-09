@@ -1,5 +1,5 @@
 /**
- * File: yuv422_rgb.c
+ * File: yuv422_rgb24.c
  * Author: Joe Shang
  * Brief: Convert YUV422 to RGB24 format.
  */
@@ -29,7 +29,7 @@
 #define G	1
 #define	B	2
 
-int yuv422_rgb24(unsigned char *yuv_buf, unsigned char *rgb_buf, unsigned int width, unsigned int height)
+int yuv422_rgb24(unsigned char *rgb_buf, unsigned char *yuv_buf, unsigned int width, unsigned int height)
 {
 	int yuvdata[4];
 	int rgbdata[3];

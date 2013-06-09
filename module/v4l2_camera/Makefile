@@ -1,14 +1,18 @@
 CC = gcc
 CFLAGS = -g -Wall
+LIBS = -ljpeg
 GTK_FLAGS = `pkg-config gtk+-2.0 --cflags --libs`
-OBJS = capture.o yuv422_rgb.o main.o
+OBJS = main.o \
+	   capture.o \
+	   yuv422_rgb24.o \
+	   jpeg_rgb24.o
 TARGET = camera
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@ $(GTK_FLAGS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LIBS) $(GTK_FLAGS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@ $(GTK_FLAGS)
+	$(CC) $(CFLAGS) -c $< -o $@ $(LIBS) $(GTK_FLAGS)
 
 .PHONY: clean
 clean:
