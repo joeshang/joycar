@@ -31,6 +31,7 @@ typedef void (*VideoCallBack)(void *ctx, void *buf_start, int buf_size);
 
 void video_open_device(char *dev_name);
 void video_query_cap();
+void video_query_stream();
 void video_query_format();
 void video_init_device();
 void video_start_capture();

@@ -18,6 +18,8 @@
 
 #include "capture.h"
 
+#define CAPTURE_DEBUG
+
 /* record for mmap memory address */
 struct buffer
 {
@@ -54,6 +56,10 @@ static void video_set_format()
         perror("set format failed");
         exit(EXIT_FAILURE);
     }
+
+#ifdef CAPTURE_DEBUG
+    printf("camera set format successfully\n");
+#endif
 }
 
 /* Request video data buffers in kernel space and mmap buffers to user space */
@@ -121,6 +127,10 @@ static void video_req_buf_and_mmap()
             exit(EXIT_FAILURE);
         }
     }
+
+#ifdef CAPTURE_DEBUG
+    printf("camera request buffers and mmap successfully\n");
+#endif
 }
 
 /* open video device */
@@ -131,6 +141,10 @@ void video_open_device(char *dev_name)
         fprintf(stderr, "can't open %s: %s\n", dev_name, strerror(errno));
         exit(EXIT_FAILURE);
     }
+
+#ifdef CAPTURE_DEBUG
+    printf("open camera %s successfully\n", dev_name);
+#endif
 }
 
 void video_query_cap()
@@ -143,6 +157,7 @@ void video_query_cap()
         exit(EXIT_FAILURE);
     }
 
+    printf("camera capabilities ->\n");
     printf("driver:\t\t%s\n", cap.driver);
     printf("card:\t\t%s\n", cap.card);
     printf("buf info:\t%s\n", cap.bus_info);
@@ -160,10 +175,29 @@ void video_query_cap()
     }
 }
 
+void video_query_stream()
+{
+    struct v4l2_streamparm streamparm;
+
+    memset(&streamparm, 0, sizeof(streamparm));
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (xioctl(fd, VIDIOC_G_PARM, &streamparm) == -1)
+    {
+        perror("get stream parameters failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("camera streaming attributes ->\n");
+    printf("%u frames per %u second\n",
+            streamparm.parm.capture.timeperframe.denominator,
+            streamparm.parm.capture.timeperframe.numerator);
+}
+
 void video_query_format()
 {
     struct v4l2_fmtdesc fmtdesc;
 
+    printf("camera format ->\n");
     memset(&fmtdesc, 0, sizeof(fmtdesc));
     fmtdesc.index = 0;
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -211,6 +245,10 @@ void video_start_capture()
         perror("stream on failed");
         exit(EXIT_FAILURE);
     }
+
+#ifdef CAPTURE_DEBUG
+    printf("camera begin to capture(stream on)\n");
+#endif
 }
 
 /* read the frame of video from device buffer and handle it in callback function */
@@ -285,6 +323,10 @@ void video_stop_capture()
         perror("stream off failed");
         exit(EXIT_FAILURE);
     }
+
+#ifdef CAPTURE_DEBUG
+    printf("camera stop to capture(stream on)\n");
+#endif
 }
 
 /* deinitialize video device */
@@ -301,6 +343,10 @@ void video_deinit_device()
     }
 
     free(buffers);
+
+#ifdef CAPTURE_DEBUG
+    printf("deinitialize camera successfully\n");
+#endif
 }
 
 /* close video device */
@@ -311,5 +357,9 @@ void video_close_device()
         perror("close failed");
         exit(EXIT_FAILURE);
     }
+
+#ifdef CAPTURE_DEBUG
+    printf("close camera successfully\n");
+#endif
 }
 
