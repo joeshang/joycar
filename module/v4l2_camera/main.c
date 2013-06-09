@@ -13,28 +13,32 @@
 #include "capture.h"
 #include "yuv422_rgb.h"
 
-#define DISP_WIDTH      DEV_WIDTH * 2
-#define DISP_HEIGHT     DEV_HEIGHT * 2
+#define CAM_WIDTH       320
+#define CAM_HEIGHT      240
+#define CAM_REQ_BUF_CNT 4
+#define DISP_WIDTH      CAM_WIDTH * 2
+#define DISP_HEIGHT     CAM_HEIGHT * 2
 #define WIN_WIDTH       DISP_WIDTH
 #define WIN_HEIGHT      DISP_HEIGHT
 
-unsigned char rgb_buf[DEV_WIDTH * DEV_HEIGHT * 3];
+CameraDevice *camera;
+unsigned char rgb_buf[CAM_WIDTH * CAM_HEIGHT * 3];
 
 static void process_image(void *ctx, void *buf_start, int buf_size)
 {
     cairo_t *cr;
     GtkWidget *drawing_area = (GtkWidget *)ctx;
 
-    yuv422_rgb24(buf_start, rgb_buf, DEV_WIDTH, DEV_HEIGHT);
+    yuv422_rgb24(buf_start, rgb_buf, CAM_WIDTH, CAM_HEIGHT);
 
     cr = gdk_cairo_create(gtk_widget_get_window(drawing_area));
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((const guchar *)rgb_buf, 
             GDK_COLORSPACE_RGB, 
             FALSE,
             8,
-            DEV_WIDTH,
-            DEV_HEIGHT,
-            DEV_WIDTH * 3,
+            CAM_WIDTH,
+            CAM_HEIGHT,
+            CAM_WIDTH * 3,
             NULL,
             NULL);
     if (pixbuf != NULL)
@@ -55,9 +59,9 @@ static void process_image(void *ctx, void *buf_start, int buf_size)
 
 static gboolean refresh_ui(gpointer user_data)
 {
-    if (video_is_read_ready())
+    if (camera_is_read_ready(camera))
     {
-        video_read_frame(user_data, process_image);
+        camera_read_frame(camera, process_image, user_data);
     }
 
     return TRUE;
@@ -67,9 +71,11 @@ static void destroy_handler(GtkWidget *widget, gpointer data)
 {
     printf("enter destroy handler\n");
 
-    video_stop_capture();
-    video_deinit_device();
-    video_close_device();
+    camera_stop_capture(camera);
+    camera_deinit_device(camera);
+    camera_close_device(camera);
+
+    camera_destroy(camera);
 
     gtk_main_quit();
 }
@@ -104,12 +110,14 @@ int main(int argc, char *argv[])
 
     gtk_widget_show_all(window);
 
-    video_open_device(argv[1]);
-    video_query_cap();
-    video_query_stream();
-    video_query_format();
-    video_init_device();
-    video_start_capture();
+    camera = camera_create();
+    camera_open_device(camera, argv[1]);
+    camera_query_cap(camera);
+    camera_query_stream(camera);
+    camera_query_support_format(camera);
+    camera_set_format(camera, CAM_WIDTH, CAM_HEIGHT, PIX_FMT_YUYV);
+    camera_req_buf_and_mmap(camera, CAM_REQ_BUF_CNT);
+    camera_start_capture(camera);
 
     g_idle_add((GSourceFunc)refresh_ui, drawing_area);
 

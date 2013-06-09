@@ -13,6 +13,11 @@
 #include "capture.h"
 #include "serial.h"
 
+#define CAM_WIDTH       320
+#define CAM_HEIGHT      240
+#define CAM_FORMAT      PIX_FMT_YUYV
+#define CAM_REQ_BUF_CNT 4
+
 #define BAUD_RATE           9600
 #define DATA_BITS           8
 #define STOP_BITS           1
@@ -22,6 +27,7 @@
 #define BUF_SIZE            1024
 
 static pthread_t capture_tid;
+CameraDevice *camera;
 
 static void process_image(void *ctx, void *buf_start, int buf_size)
 {
@@ -40,9 +46,9 @@ static void *capture_thread(void *user_data)
     /* video capturing module */
     for (;;)
     {
-        if (video_is_read_ready())
+        if (camera_is_read_ready(camera))
         {
-            video_read_frame(user_data, process_image);
+            camera_read_frame(camera, process_image, user_data);
         }
     }
 
@@ -56,6 +62,10 @@ static void command_callback(int status, void *command, void *ctx)
     if (status == COMMAND_PASS)
     {
         write(serial_fd, command, strlen(command));
+
+#ifdef DEBUG
+        printf("pass command: %s\n", (char *)command);
+#endif
     }
 }
 
@@ -115,11 +125,14 @@ int main(int argc, char **argv)
 #endif
 
     /* camera device init */
-    video_open_device(argv[2]);
-    video_query_cap();
-    video_query_format();
-    video_init_device();
-    video_start_capture();
+    camera = camera_create();
+    camera_open_device(camera, argv[2]);
+    camera_query_cap(camera);
+    camera_query_stream(camera);
+    camera_query_support_format(camera);
+    camera_set_format(camera, CAM_WIDTH, CAM_HEIGHT, CAM_FORMAT);
+    camera_req_buf_and_mmap(camera, CAM_REQ_BUF_CNT);
+    camera_start_capture(camera);
 
     /* serial device init */
     if ((serial_fd = serial_open_device(argv[3])) == -1)
@@ -174,17 +187,15 @@ int main(int argc, char **argv)
             }
             command_buf[recv_size] = '\0';
 
-#ifdef DEBUG
-            printf("command(length = %d): %s\n", recv_size, command_buf);
-#endif
-
             extract_command(command_buf, command_callback, (void *)serial_fd);
         }
     }
 
-    video_stop_capture();
-    video_deinit_device();
-    video_close_device();
+    camera_stop_capture(camera);
+    camera_deinit_device(camera);
+    camera_close_device(camera);
+
+    camera_destroy(camera);
 
     close(listen_socket);
     close(serial_fd);
