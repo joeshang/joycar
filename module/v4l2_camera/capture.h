@@ -20,35 +20,62 @@
 #ifndef _CAPTURE_H_
 #define _CAPTURE_H_
 
-typedef enum _CameraFormat
+typedef enum _StreamingState
 {
-    PIX_FMT_YUYV,
-    PIX_FMT_MJPEG
-}CameraFormat;
+    STREAMING_OFF,
+    STREAMING_ON,
+    STREAMING_PAUSED
+}StreamingState;
 
-struct _CameraDevice;
-typedef struct _CameraDevice CameraDevice;
+typedef enum _PixelFormat
+{
+    PIX_FMT_MJPEG,
+    PIX_FMT_YUYV
+}PixelFormat;
+
+/* record for mmap memory address */
+typedef struct _ReqBufInfo
+{
+    void    *start;
+    size_t  length;
+}ReqBufInfo;
+
+typedef struct _CameraDevice
+{
+    char *dev_name;
+    int width;
+    int height;
+    int fps;
+    int format;
+
+    StreamingState streaming_state;
+
+    int fd;
+    ReqBufInfo *req_buf_info;
+}CameraDevice;
 
 typedef void (*VideoCallBack)(void *ctx, void *buf_start, int buf_size);
 
-CameraDevice *camera_create(void);
-void camera_open_device(CameraDevice *thiz, char *dev_name);
-void camera_query_cap(CameraDevice *thiz);
-void camera_query_stream(CameraDevice *thiz);
-void camera_query_support_format(CameraDevice *thiz);
-void camera_set_format(CameraDevice *thiz,
-        int width,
-        int height,
-        CameraFormat format);
-void camera_req_buf_and_mmap(CameraDevice *thiz, int req_buf_cnt);
-void camera_start_capture(CameraDevice *thiz);
+/* initialize camera device structure for operation */
+int camera_init(CameraDevice *thiz,
+                char *dev_name,
+                int width,
+                int height,
+                int fps,
+                PixelFormat format);
+
+/* open camera and query informations of camera device */
+void camera_open_query(CameraDevice *thiz);
+
+/* open camera and set attributes of camera */
+void camera_open_set(CameraDevice *thiz);
+
+/* deinitialize and close camera */
+void camera_close(CameraDevice *thiz);
+
+/* read frame of camera with callback function */
 void camera_read_frame(CameraDevice *thiz, 
-        VideoCallBack video_data_callback,
-        void *ctx );
-int  camera_is_read_ready(CameraDevice *thiz);
-void camera_stop_capture(CameraDevice *thiz);
-void camera_deinit_device(CameraDevice *thiz);
-void camera_close_device(CameraDevice *thiz);
-void camera_destroy(CameraDevice *thiz);
+                       VideoCallBack video_data_callback,
+                       void *ctx);
 
 #endif

@@ -16,4 +16,4 @@ $(TARGET): $(OBJS)
 
 .PHONY: clean
 clean:
-	rm -rf *.o *.swp $(OBJS) $(TARGET)
+	rm -rf *.o *.swp $(TARGET)

@@ -16,59 +16,21 @@
 
 #define CAM_WIDTH       320
 #define CAM_HEIGHT      240
-#define CAM_REQ_BUF_CNT 4
 #define DISP_WIDTH      CAM_WIDTH * 2
 #define DISP_HEIGHT     CAM_HEIGHT * 2
 #define WIN_WIDTH       DISP_WIDTH
 #define WIN_HEIGHT      DISP_HEIGHT
 
-CameraDevice *camera;
+CameraDevice camera;
 unsigned char rgb_buf[CAM_WIDTH * CAM_HEIGHT * 3];
-
-static void process_image(void *buf_start, int buf_size)
-{
-    int i;
-    unsigned char *buf = (unsigned char *)buf_start;
-
-    //yuv422_rgb24(rgb_buf, buf_start, CAM_WIDTH, CAM_HEIGHT);
-
-    /* check buffman table(optional) */
-    for (i = 0; i < buf_size; i++)
-    {
-        if ((buf[i] == 0x000000FF)
-                && (buf[i + 1] == 0x000000C4))
-        {
-            /* huffman table found */
-            break;
-        }
-    }
-
-    if (i == buf_size)
-    {
-        fprintf(stderr, "huffman table don't exist\n");
-    }
-
-    /* find the start of JPEG image */
-    /* Start Of Image(SOI): "FFD8" */
-    /* End Of Image(EOI): "FFD9" */
-    for (i = 0; i < buf_size; i++)
-    {
-        if ((buf[i] == 0x000000FF)
-                && (buf[i + 1] == 0x000000D8))
-        {
-            break;
-        }
-    }
-
-    jpeg_rgb24(rgb_buf, buf + i, buf_size - i);
-}
 
 static void draw_image(void *ctx, void *buf_start, int buf_size)
 {
     cairo_t *cr;
     GtkWidget *drawing_area = (GtkWidget *)ctx;
 
-    process_image(buf_start, buf_size);
+    yuv422_rgb24(rgb_buf, buf_start, CAM_WIDTH, CAM_HEIGHT);
+    //jpeg_rgb24(rgb_buf, buf_start, buf_size);
 
     cr = gdk_cairo_create(gtk_widget_get_window(drawing_area));
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((const guchar *)rgb_buf, 
@@ -98,10 +60,7 @@ static void draw_image(void *ctx, void *buf_start, int buf_size)
 
 static gboolean refresh_ui(gpointer user_data)
 {
-    if (camera_is_read_ready(camera))
-    {
-        camera_read_frame(camera, draw_image, user_data);
-    }
+    camera_read_frame(&camera, draw_image, user_data);
 
     return TRUE;
 }
@@ -110,11 +69,7 @@ static void destroy_handler(GtkWidget *widget, gpointer data)
 {
     printf("enter destroy handler\n");
 
-    camera_stop_capture(camera);
-    camera_deinit_device(camera);
-    camera_close_device(camera);
-
-    camera_destroy(camera);
+    camera_close(&camera);
 
     gtk_main_quit();
 }
@@ -149,14 +104,8 @@ int main(int argc, char *argv[])
 
     gtk_widget_show_all(window);
 
-    camera = camera_create();
-    camera_open_device(camera, argv[1]);
-    camera_query_cap(camera);
-    camera_query_stream(camera);
-    camera_query_support_format(camera);
-    camera_set_format(camera, CAM_WIDTH, CAM_HEIGHT, PIX_FMT_MJPEG);
-    camera_req_buf_and_mmap(camera, CAM_REQ_BUF_CNT);
-    camera_start_capture(camera);
+    camera_init(&camera, argv[1], CAM_WIDTH, CAM_HEIGHT, 15, PIX_FMT_YUYV);
+    camera_open_set(&camera);
 
     g_idle_add((GSourceFunc)refresh_ui, drawing_area);
 
