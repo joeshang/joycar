@@ -9,19 +9,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "capture.h"
-#include "yuv422_rgb24.h"
-#include "jpeg_rgb24.h"
+#include "decoder.h"
+#include "decoder_mjpeg.h"
+#include "decoder_yuv422.h"
 
-#define CAM_WIDTH       320
-#define CAM_HEIGHT      240
-#define DISP_WIDTH      CAM_WIDTH * 2
-#define DISP_HEIGHT     CAM_HEIGHT * 2
+#define CAM_WIDTH       640
+#define CAM_HEIGHT      480
+#define DISP_WIDTH      CAM_WIDTH
+#define DISP_HEIGHT     CAM_HEIGHT
 #define WIN_WIDTH       DISP_WIDTH
 #define WIN_HEIGHT      DISP_HEIGHT
 
 CameraDevice camera;
+Decoder *decoder = NULL;
 unsigned char rgb_buf[CAM_WIDTH * CAM_HEIGHT * 3];
 
 static void draw_image(void *ctx, void *buf_start, int buf_size)
@@ -29,8 +32,7 @@ static void draw_image(void *ctx, void *buf_start, int buf_size)
     cairo_t *cr;
     GtkWidget *drawing_area = (GtkWidget *)ctx;
 
-    yuv422_rgb24(rgb_buf, buf_start, CAM_WIDTH, CAM_HEIGHT);
-    //jpeg_rgb24(rgb_buf, buf_start, buf_size);
+    decoder_decode(decoder, rgb_buf, buf_start, buf_size);
 
     cr = gdk_cairo_create(gtk_widget_get_window(drawing_area));
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_data((const guchar *)rgb_buf, 
@@ -70,6 +72,7 @@ static void destroy_handler(GtkWidget *widget, gpointer data)
     printf("enter destroy handler\n");
 
     camera_close(&camera);
+    decoder_destroy(decoder);
 
     gtk_main_quit();
 }
@@ -80,9 +83,27 @@ int main(int argc, char *argv[])
     GtkWidget *vbox;
     GtkWidget *drawing_area;
 
-    if (argc != 2)
+    int format;
+
+    if (argc != 3)
     {
-        fprintf(stderr, "Usage: %s dev_name\n", argv[0]);
+        fprintf(stderr, "Usage: %s dev_name format(yuyv/mjpeg)\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(argv[2], "yuyv") == 0)
+    {
+        format = PIX_FMT_YUYV;
+        decoder = decoder_yuv422_create();
+    }
+    else if (strcmp(argv[2], "mjpeg") == 0)
+    {
+        format = PIX_FMT_MJPEG;
+        decoder = decoder_mjpeg_create();
+    }
+    else
+    {
+        fprintf(stderr, "unsupported format, support yuyv and mjpeg\n");
         exit(EXIT_FAILURE);
     }
 
@@ -104,7 +125,7 @@ int main(int argc, char *argv[])
 
     gtk_widget_show_all(window);
 
-    camera_init(&camera, argv[1], CAM_WIDTH, CAM_HEIGHT, 15, PIX_FMT_YUYV);
+    camera_init(&camera, argv[1], CAM_WIDTH, CAM_HEIGHT, 15, format);
     camera_open_set(&camera);
 
     g_idle_add((GSourceFunc)refresh_ui, drawing_area);

@@ -2,20 +2,7 @@
  * File: capture.h
  * Author: Joe Shang
  * Brief: The camera capture program with v4l2 framework
- * Capturing Process:
- *  1. camera_open_device(): Open camera
- *  2. camera_query_cap(): Query camera's capability.
- *  3. camera_query_stream(): Query camera's output format.
- *  4. camera_query_support_format(): Query camera's output format.
- *  5. camera_set_format(): Set the output format of camera.
- *  6. camera_req_buf_and_mmap(): Request camera data buffers in kernel space and mmap buffers to user space.
- *  7. camera_start_capture(): Device begin to capture camera.
- *  8. camera_is_read_ready(): Query whether the camera data is ready or not.
- *  9. camera_read_frame(): Read frame of camera and handle it in callback function(VideoCallBack).
- *  10.camera_stop_capture(): Camera stop to capture video.
- *  11.camera_deinit_device(): Deinitialize camera.
- *  12.camera_close_device(): Close camera.
- */
+*/
 
 #ifndef _CAPTURE_H_
 #define _CAPTURE_H_
@@ -42,16 +29,18 @@ typedef struct _ReqBufInfo
 
 typedef struct _CameraDevice
 {
+    /* input attributes */
     char *dev_name;
     int width;
     int height;
     int fps;
+    int in_size;
     int format;
 
-    StreamingState streaming_state;
-
+    /* internal status */
     int fd;
     ReqBufInfo *req_buf_info;
+    StreamingState streaming_state;
 }CameraDevice;
 
 typedef void (*VideoCallBack)(void *ctx, void *buf_start, int buf_size);

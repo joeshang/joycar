@@ -4,8 +4,9 @@ LIBS = -ljpeg
 GTK_FLAGS = `pkg-config gtk+-2.0 --cflags --libs`
 OBJS = main.o \
 	   capture.o \
-	   yuv422_rgb24.o \
-	   jpeg_rgb24.o
+	   decoder_mjpeg.o \
+	   decoder_yuv422.o \
+	   color.o
 TARGET = camera
 
 $(TARGET): $(OBJS)
