@@ -18,7 +18,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "yuv422_rgb.h"
+#include "decoder.h"
+#include "decoder_mjpeg.h"
+#include "decoder_yuv422.h"
 
 //#define DEBUG
 
@@ -34,8 +36,9 @@
 int sockfd;
 pthread_t capture_tid;
 
+Decoder *frame_decoder = NULL;
+
 unsigned char rgb_buf[DEV_WIDTH * DEV_HEIGHT * 3];
-char video_buf[DEV_WIDTH * DEV_HEIGHT * 2];
 
 static void refresh_video_area(GtkWidget *drawing_area)
 {
@@ -72,28 +75,32 @@ static void refresh_video_area(GtkWidget *drawing_area)
 
 static gboolean video_data_handler(gpointer user_data)
 {
-    int video_size;
+    unsigned char *frame_buf = NULL;
+    int frame_size;
 
+    int pos;
     int left_size;
     int recv_size;
     int recv_buf_size;
     char recv_buf[BUF_SIZE];
     
-    /* get the video data size */
-    recv(sockfd, (void *)&video_size, sizeof(int), 0);
+    /* get the frame data size */
+    recv(sockfd, (void *)&frame_size, sizeof(int), 0);
 
 #ifdef DEBUG
-    printf("data size: %d\n", video_size);
+    printf("data size: %d\n", frame_size);
 #endif
 
-    video_buf[0] = '\0';
-    if (video_size > 0)
+    if (frame_size > 0)
     {
-        left_size = video_size;
+        frame_buf = calloc(frame_size + 10, 1);
+        
+        pos = 0;
+        left_size = frame_size;
         recv_buf_size = BUF_SIZE;
         while (left_size > 0)
         {
-            /* ensure the real receive video data size == video_size */
+            /* ensure the real receive frame data size == frame_size */
             if (left_size - BUF_SIZE < 0)
             {
                 recv_buf_size = left_size;
@@ -104,28 +111,32 @@ static gboolean video_data_handler(gpointer user_data)
                 return FALSE;
             }
 
-            left_size -= recv_size;
+            memcpy(frame_buf + pos, recv_buf, recv_size);
             
-            strncat(video_buf, recv_buf, recv_size);
+            left_size -= recv_size;
+            pos += recv_size;
+           // strncat((char *)frame_buf, recv_buf, recv_size);
         }
 
 #ifdef DEBUG
-    printf("finish receiving data\n");
+        printf("finish receiving data");
 #endif
-        yuv422_rgb24((unsigned char *)video_buf, rgb_buf, DEV_WIDTH, DEV_HEIGHT);
+        decoder_decode(frame_decoder, rgb_buf, frame_buf, frame_size);
+        free(frame_buf);
+        frame_buf = NULL;
 
 #ifdef DEBUG
-    printf("finish formating data\n");
+        printf("finish formating data\n");
 #endif
         refresh_video_area((GtkWidget *)user_data);
 
 #ifdef DEBUG
-    printf("finish refreshing data\n");
+        printf("finish refreshing data\n");
 #endif
     }
     else
     {
-        fprintf(stderr, "invalid video size\n");
+        fprintf(stderr, "invalid frame size\n");
     }
 
     return TRUE;
@@ -172,6 +183,7 @@ void destroy_handler(GtkWidget *widget, gpointer data)
 {
     close(sockfd);
     pthread_cancel(capture_tid);
+    decoder_destroy(frame_decoder);
 
     gtk_main_quit();
 }
@@ -184,9 +196,23 @@ int main(int argc, char *argv[])
 
     struct sockaddr_in serv_addr;
 
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "Usage: %s addr port\n", argv[0]);
+        fprintf(stderr, "Usage: %s addr port format\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(argv[3], "yuyv") == 0)
+    {
+        frame_decoder = decoder_yuv422_create();
+    }
+    else if (strcmp(argv[3], "mjpeg") == 0)
+    {
+        frame_decoder = decoder_mjpeg_create();
+    }
+    else
+    {
+        fprintf(stderr, "unsupported format, support yuv and mjpeg\n");
         exit(EXIT_FAILURE);
     }
 

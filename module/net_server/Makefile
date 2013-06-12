@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -pthread #-DHAS_SERIAL
+CFLAGS = -g -Wall -pthread
 TARGETS = server
 OBJS = server.o \
 	   capture.o \

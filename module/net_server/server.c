@@ -14,14 +14,13 @@
 
 #define CAM_WIDTH       320
 #define CAM_HEIGHT      240
-#define CAM_FORMAT      PIX_FMT_YUYV
 #define CAM_REQ_BUF_CNT 4
 
-#define BACKLOG             5
-#define BUF_SIZE            1024
+#define BACKLOG         5
+#define BUF_SIZE        1024
 
 static pthread_t capture_tid;
-CameraDevice *camera;
+CameraDevice camera;
 
 static void process_image(void *ctx, void *buf_start, int buf_size)
 {
@@ -40,10 +39,7 @@ static void *capture_thread(void *user_data)
     /* camera capturing module */
     for (;;)
     {
-        if (camera_is_read_ready(camera))
-        {
-            camera_read_frame(camera, process_image, user_data);
-        }
+        camera_read_frame(&camera, process_image, user_data);
     }
 
     return NULL;
@@ -59,6 +55,8 @@ static void command_callback(int status, void *command, void *ctx)
 
 int main(int argc, char **argv)
 {
+    int format;
+
     int listen_socket;
     int connect_socket;
     socklen_t client_addr_len;
@@ -70,9 +68,23 @@ int main(int argc, char **argv)
     int recv_size;
     char command_buf[BUF_SIZE];
 
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "Usage: %s port camera_name\n", argv[0]);
+        fprintf(stderr, "Usage: %s port camera_name format\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(argv[3], "yuyv") == 0)
+    {
+        format = PIX_FMT_YUYV;
+    }
+    else if (strcmp(argv[3], "mjpeg") == 0)
+    {
+        format = PIX_FMT_MJPEG;
+    }
+    else
+    {
+        fprintf(stderr, "unsupported format, support yuyv and mjpeg\n");
         exit(EXIT_FAILURE);
     }
 
@@ -110,14 +122,8 @@ int main(int argc, char **argv)
     printf("server is listening at %s:%d\n", disp_addr_str, ntohs(disp_addr.sin_port));
 
     /* camera device init */
-    camera = camera_create();
-    camera_open_device(camera, argv[2]);
-    camera_query_cap(camera);
-    camera_query_stream(camera);
-    camera_query_support_format(camera);
-    camera_set_format(camera, CAM_WIDTH, CAM_HEIGHT, CAM_FORMAT);
-    camera_req_buf_and_mmap(camera, CAM_REQ_BUF_CNT);
-    camera_start_capture(camera);
+    camera_init(&camera, argv[2], CAM_WIDTH, CAM_HEIGHT, 15, format);
+    camera_open_set(&camera);
 
     for (;;)
     {
@@ -166,11 +172,7 @@ int main(int argc, char **argv)
         }
     }
 
-    camera_stop_capture(camera);
-    camera_deinit_device(camera);
-    camera_close_device(camera);
-
-    camera_destroy(camera);
+    camera_close(&camera);
 
     close(listen_socket);
 
