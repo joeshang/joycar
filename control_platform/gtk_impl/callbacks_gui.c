@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "decoder.h"
 #include "connector.h"
 #include "connector_net.h"
 #include "connector_serial.h"
@@ -20,7 +21,9 @@ enum CON_TYPE
     CON_NET
 };
 
-Connector* active_connector = NULL;
+extern Decoder *frame_decoder;
+extern Connector *active_connector; 
+
 static int saved_con_type = CON_SERIAL;
 
 /***********************************************************
@@ -34,6 +37,11 @@ void on_main_window_destroy(GtkWidget *widget, gpointer user_data)
     if (active_connector != NULL)
     {
         connector_destroy(active_connector);
+    }
+
+    if (frame_decoder != NULL)
+    {
+        decoder_destroy(frame_decoder);
     }
 
     gtk_main_quit();

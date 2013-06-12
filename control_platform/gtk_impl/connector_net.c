@@ -111,6 +111,11 @@ static int connector_net_recv(Connector *thiz, void *buf, size_t size)
 
 static void connector_net_destroy(Connector *thiz)
 {
+    PrivInfo *priv = (PrivInfo *)thiz->priv;
+
+    priv->connect_status = 0;
+    close(priv->socket);
+
     free(thiz);
 }
 

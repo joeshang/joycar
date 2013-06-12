@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall #-DDEBUG
+CFLAGS = -g -Wall # -DDEBUG -DDECODER_DEBUG
 LIBS = -ljpeg
 GTK_FLAGS = `pkg-config gtk+-2.0 --cflags --libs`
 TARGET = client

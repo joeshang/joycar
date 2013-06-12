@@ -12,7 +12,7 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "yuv422_rgb.h"
+#include "decoder.h"
 #include "connector.h"
 #include "callbacks_con.h"
 
@@ -25,10 +25,11 @@
 #define STATUS_BAR_CTX  1
 
 extern Connector *active_connector;
+extern Decoder *frame_decoder;
 
 static pthread_t recv_tid;
 
-char video_buf[DEV_WIDTH * DEV_HEIGHT * 2];
+unsigned char video_buf[DEV_WIDTH * DEV_HEIGHT * 2];
 unsigned char rgb_buf[DEV_WIDTH * DEV_HEIGHT * 3];
 
 static void refresh_drawing_area(GtkWidget *drawing_area)
@@ -66,6 +67,7 @@ static void refresh_drawing_area(GtkWidget *drawing_area)
 
 static gboolean video_data_handler(gpointer user_data)
 {
+    int pos;
     int video_size;
 
     int left_size;
@@ -79,9 +81,9 @@ static gboolean video_data_handler(gpointer user_data)
     /* get the video data size */
     connector_recv(active_connector, (void *)&video_size, sizeof(int));
 
-    video_buf[0] = '\0';
     if (video_size > 0)
     {
+        pos = 0;
         left_size = video_size;
         recv_buf_size = BUF_SIZE;
 
@@ -99,13 +101,14 @@ static gboolean video_data_handler(gpointer user_data)
                 return FALSE;
             }
 
+            memcpy(video_buf + pos, recv_buf, recv_size);
+
+            pos += recv_size;
             left_size -= recv_size;
-            
-            strncat(video_buf, recv_buf, recv_size);
         }
 
         /* process image */
-        yuv422_rgb24((unsigned char *)video_buf, rgb_buf, DEV_WIDTH, DEV_HEIGHT);
+        decoder_decode(frame_decoder, rgb_buf, video_buf, video_size);
 
         builder = (GtkBuilder *)user_data;
         drawing_area = GTK_WIDGET(gtk_builder_get_object(builder, "video_area"));

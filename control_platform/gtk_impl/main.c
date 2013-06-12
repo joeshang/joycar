@@ -5,13 +5,43 @@
  */
 
 #include <gtk/gtk.h>
+#include <string.h>
+
+#include "decoder.h"
+#include "decoder_mjpeg.h"
+#include "decoder_yuv422.h"
+#include "connector.h"
 
 #define GLADE_FILE  "gui/joycar.glade"
+
+Decoder *frame_decoder = NULL;
+Connector *active_connector = NULL;
 
 int main(int argc, char *argv[])
 {
     GtkBuilder *builder;
     GtkWidget *main_window;
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s format\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    /* initialize frame decoder */
+    if (strcmp(argv[1], "yuyv") == 0)
+    {
+        frame_decoder = decoder_yuv422_create();
+    }
+    else if (strcmp(argv[1], "mjpeg") == 0)
+    {
+        frame_decoder = decoder_mjpeg_create();
+    }
+    else
+    {
+        fprintf(stderr, "unsupport format, support yuyv and mjpeg\n");
+        exit(EXIT_FAILURE);
+    }
 
     if (!g_thread_supported())
     {

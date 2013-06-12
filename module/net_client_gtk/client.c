@@ -115,11 +115,10 @@ static gboolean video_data_handler(gpointer user_data)
             
             left_size -= recv_size;
             pos += recv_size;
-           // strncat((char *)frame_buf, recv_buf, recv_size);
         }
 
 #ifdef DEBUG
-        printf("finish receiving data");
+        printf("finish receiving data\n");
 #endif
         decoder_decode(frame_decoder, rgb_buf, frame_buf, frame_size);
         free(frame_buf);
