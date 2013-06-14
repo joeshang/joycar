@@ -16,7 +16,8 @@ extern "C" {
 typedef int (*FrameProcessFunc)(unsigned char *out_buf,
                                 unsigned char *in_buf,
                                 int in_size,
-                                int in_format);
+                                int in_format,
+                                int out_format);
 
 typedef void (*DataRequestFunc)(unsigned char *buf, int buf_size, void *ctx);
 
@@ -42,11 +43,12 @@ void video_container_input_raw(VideoContainer *container,
                                unsigned char *raw_buffer, 
                                int raw_size);
 void video_container_requestdb(VideoContainer *container,
-                                 DataRequestFunc requesedb_callback,
-                                 void *ctx);
+                               DataRequestFunc requesedb_callback,
+                               void *ctx);
 void video_container_updatedb(VideoContainer *container,
                               FrameProcessFunc frame_process,
-                              int raw_format); 
+                              int in_format,
+                              int out_format); 
 void video_container_releasedb(VideoContainer *container);
 
 #ifdef __cplusplus

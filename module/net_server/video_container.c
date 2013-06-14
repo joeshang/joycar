@@ -60,7 +60,8 @@ void video_container_input_raw(VideoContainer *container,
 
 void video_container_updatedb(VideoContainer *container,
                               FrameProcessFunc frame_process,
-                              int raw_format)
+                              int in_format,
+                              int out_format)
 {
     assert(container != NULL && frame_process != NULL);
 
@@ -69,7 +70,8 @@ void video_container_updatedb(VideoContainer *container,
     container->processed_size = frame_process(container->processed_buffer, 
                                               container->raw_buffer, 
                                               container->raw_size, 
-                                              raw_format);
+                                              in_format,
+                                              out_format);
 
     pthread_cond_broadcast(&container->db_update);
     pthread_mutex_unlock(&container->db);

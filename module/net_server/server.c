@@ -14,15 +14,27 @@
 #include "video_container.h"
 #include "jpeg_encoder.h"
 
+/************************************************************
+ * Macro Definitions
+ ************************************************************/
 #define CAM_WIDTH       320
 #define CAM_HEIGHT      240
 #define CAM_FPS         5
-#define CAM_FORMAT      PIX_FMT_MJPEG
 #define JPEG_QUALITY    80
 
 #define BACKLOG         5
 #define BUF_SIZE        1024
 
+enum _OutputFormat
+{
+    OUT_FMT_RAW,
+    OUT_FMT_JPEG
+};
+
+/************************************************************
+ * Global Variables
+ ************************************************************/
+CameraDevice camera;
 VideoContainer container;
 
 pthread_t camera_tid;
@@ -37,25 +49,34 @@ unsigned char *send_frame_buf[CAM_WIDTH * CAM_HEIGHT * 2];
 static int process_image(unsigned char *out_buf,
                          unsigned char *in_buf,
                          int in_size,
-                         int in_format)
+                         int in_format,
+                         int out_format)
 {
     int processed_size = 0;
 
-    switch (in_format)
+    if (out_format == OUT_FMT_RAW)
     {
-        case PIX_FMT_YUYV:
-            processed_size = jpeg_encoder_yuv422(out_buf, 
-                                                 in_buf, 
-                                                 in_size,
-                                                 CAM_WIDTH, 
-                                                 CAM_HEIGHT, 
-                                                 JPEG_QUALITY);
-            break;
-        case PIX_FMT_MJPEG:
-            processed_size = jpeg_encoder_mjpeg(out_buf, in_buf, in_size);
-            break;
-        default:
-            break;
+        memcpy(out_buf, in_buf, in_size);
+        processed_size = in_size;
+    }
+    else if (out_format == OUT_FMT_JPEG)
+    {
+        switch (in_format)
+        {
+            case PIX_FMT_YUYV:
+                processed_size = jpeg_encoder_yuv422(out_buf, 
+                                                     in_buf, 
+                                                     in_size,
+                                                     CAM_WIDTH, 
+                                                     CAM_HEIGHT, 
+                                                     JPEG_QUALITY);
+                break;
+            case PIX_FMT_MJPEG:
+                processed_size = jpeg_encoder_mjpeg(out_buf, in_buf, in_size);
+                break;
+            default:
+                break;
+        }
     }
 
     return processed_size;
@@ -115,16 +136,16 @@ static void *send_thread(void *user_data)
 
 static void *camera_thread(void *user_data)
 {
-    CameraDevice *pcamera = (CameraDevice *)user_data;
+    int out_format = (int)user_data;
 
     pthread_detach(pthread_self());
 
     /* camera capturing module */
     for (;;)
     {
-        camera_read_frame(pcamera, frame_callback, NULL);
+        camera_read_frame(&camera, frame_callback, NULL);
 
-        video_container_updatedb(&container, process_image, pcamera->format);
+        video_container_updatedb(&container, process_image, camera.format, out_format);
     }
 
     return NULL;
@@ -132,8 +153,8 @@ static void *camera_thread(void *user_data)
 
 int main(int argc, char **argv)
 {
-    CameraDevice camera;
-    int format;
+    int in_format;
+    int out_format;
 
     int recv_size;
     char command_buf[BUF_SIZE];
@@ -146,23 +167,37 @@ int main(int argc, char **argv)
     struct sockaddr_in client_addr;
     struct sockaddr_in disp_addr;
 
-    if (argc != 4)
+    if (argc != 5)
     {
-        fprintf(stderr, "Usage: %s port camera_name format\n", argv[0]);
+        fprintf(stderr, "Usage: %s port camera_name camera_format output_format\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
     if (strcmp(argv[3], "yuyv") == 0)
     {
-        format = PIX_FMT_YUYV;
+        in_format = PIX_FMT_YUYV;
     }
     else if (strcmp(argv[3], "mjpeg") == 0)
     {
-        format = PIX_FMT_MJPEG;
+        in_format = PIX_FMT_MJPEG;
     }
     else
     {
-        fprintf(stderr, "unsupported format, support yuyv and mjpeg\n");
+        fprintf(stderr, "unsupported input format, support \"yuyv\" and \"mjpeg\"\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(argv[4], "raw") == 0)
+    {
+        out_format = OUT_FMT_RAW;
+    }
+    else if (strcmp(argv[4], "jpeg") == 0)
+    {
+        out_format = OUT_FMT_JPEG;
+    }
+    else
+    {
+        fprintf(stderr, "unsupported output format, support \"raw\" and \"jpeg\"\n");
         exit(EXIT_FAILURE);
     }
 
@@ -203,9 +238,9 @@ int main(int argc, char **argv)
     video_container_init(&container,  CAM_WIDTH * CAM_HEIGHT * 2);
 
     /* camera device init */
-    camera_init(&camera, argv[2], CAM_WIDTH, CAM_HEIGHT, CAM_FPS, format);
+    camera_init(&camera, argv[2], CAM_WIDTH, CAM_HEIGHT, CAM_FPS, in_format);
     camera_open_set(&camera);
-    pthread_create(&camera_tid, NULL, camera_thread, &camera);
+    pthread_create(&camera_tid, NULL, camera_thread, (void *)out_format);
 
     for (;;)
     {
