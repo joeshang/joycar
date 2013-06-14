@@ -11,38 +11,65 @@
 
 #include "command.h"
 #include "capture.h"
+#include "video_container.h"
+#include "jpeg_encoder.h"
 
 #define CAM_WIDTH       320
 #define CAM_HEIGHT      240
-#define CAM_REQ_BUF_CNT 4
+#define CAM_FPS         5
+#define CAM_FORMAT      PIX_FMT_MJPEG
+#define JPEG_QUALITY    80
 
 #define BACKLOG         5
 #define BUF_SIZE        1024
 
-static pthread_t capture_tid;
-CameraDevice camera;
+VideoContainer container;
 
-static void process_image(void *ctx, void *buf_start, int buf_size)
+pthread_t camera_tid;
+pthread_t send_tid;
+
+int send_frame_size = 0;
+unsigned char *send_frame_buf[CAM_WIDTH * CAM_HEIGHT * 2];
+
+/************************************************************
+ * Callback Function Area
+ ************************************************************/
+static int process_image(unsigned char *out_buf,
+                         unsigned char *in_buf,
+                         int in_size,
+                         int in_format)
 {
-    int client_socket = (int)ctx;
-    int data_type = 1;
+    int processed_size = 0;
 
-    send(client_socket, (void *)&data_type, sizeof(int), 0);
-    send(client_socket, (void *)&buf_size, sizeof(int), 0);
-    send(client_socket, buf_start, buf_size, 0);
-}
-
-static void *capture_thread(void *user_data)
-{
-    pthread_detach(pthread_self());
-
-    /* camera capturing module */
-    for (;;)
+    switch (in_format)
     {
-        camera_read_frame(&camera, process_image, user_data);
+        case PIX_FMT_YUYV:
+            processed_size = jpeg_encoder_yuv422(out_buf, 
+                                                 in_buf, 
+                                                 in_size,
+                                                 CAM_WIDTH, 
+                                                 CAM_HEIGHT, 
+                                                 JPEG_QUALITY);
+            break;
+        case PIX_FMT_MJPEG:
+            processed_size = jpeg_encoder_mjpeg(out_buf, in_buf, in_size);
+            break;
+        default:
+            break;
     }
 
-    return NULL;
+    return processed_size;
+}
+
+static void requestdb_callback(unsigned char *buf, int buf_size, void *ctx)
+{
+    memcpy(send_frame_buf, buf, buf_size);
+    send_frame_size = buf_size;
+}
+
+static void frame_callback(void *ctx, void *buf_start, int buf_size)
+{
+    video_container_input_raw(&container, buf_start, buf_size);
 }
 
 static void command_callback(int status, void *command, void *ctx)
@@ -53,9 +80,63 @@ static void command_callback(int status, void *command, void *ctx)
     }
 }
 
+static void send_thread_cleanup(void *arg)
+{
+    printf("enter send thread cleanup\n");
+    video_container_releasedb(&container);
+}
+
+/************************************************************
+ * Thread Function Area
+ ************************************************************/
+static void *send_thread(void *user_data)
+{
+    int data_type = 1;
+    int client_socket = (int)user_data;
+
+    printf("enter into send thread\n");
+
+    pthread_cleanup_push(send_thread_cleanup, NULL);
+    pthread_detach(pthread_self());
+
+    for (;;)
+    {
+        video_container_requestdb(&container, requestdb_callback, NULL);
+
+        send(client_socket, (void *)&data_type, sizeof(int), 0);
+        send(client_socket, (void *)&send_frame_size, sizeof(int), 0);
+        send(client_socket, send_frame_buf, send_frame_size, 0);
+    }
+
+    pthread_cleanup_pop(1);
+
+    return NULL;
+}
+
+static void *camera_thread(void *user_data)
+{
+    CameraDevice *pcamera = (CameraDevice *)user_data;
+
+    pthread_detach(pthread_self());
+
+    /* camera capturing module */
+    for (;;)
+    {
+        camera_read_frame(pcamera, frame_callback, NULL);
+
+        video_container_updatedb(&container, process_image, pcamera->format);
+    }
+
+    return NULL;
+}
+
 int main(int argc, char **argv)
 {
+    CameraDevice camera;
     int format;
+
+    int recv_size;
+    char command_buf[BUF_SIZE];
 
     int listen_socket;
     int connect_socket;
@@ -64,9 +145,6 @@ int main(int argc, char **argv)
     struct sockaddr_in serv_addr;
     struct sockaddr_in client_addr;
     struct sockaddr_in disp_addr;
-
-    int recv_size;
-    char command_buf[BUF_SIZE];
 
     if (argc != 4)
     {
@@ -121,9 +199,13 @@ int main(int argc, char **argv)
     inet_ntop(AF_INET, &disp_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
     printf("server is listening at %s:%d\n", disp_addr_str, ntohs(disp_addr.sin_port));
 
+    /* video container init */
+    video_container_init(&container,  CAM_WIDTH * CAM_HEIGHT * 2);
+
     /* camera device init */
-    camera_init(&camera, argv[2], CAM_WIDTH, CAM_HEIGHT, 15, format);
+    camera_init(&camera, argv[2], CAM_WIDTH, CAM_HEIGHT, CAM_FPS, format);
     camera_open_set(&camera);
+    pthread_create(&camera_tid, NULL, camera_thread, &camera);
 
     for (;;)
     {
@@ -143,7 +225,7 @@ int main(int argc, char **argv)
         inet_ntop(AF_INET, &client_addr.sin_addr, disp_addr_str, INET_ADDRSTRLEN);
         printf("client(%s) connected\n", disp_addr_str);
 
-        pthread_create(&capture_tid, NULL, capture_thread, (void *)connect_socket);
+        pthread_create(&send_tid, NULL, send_thread, (void *)connect_socket);
 
         /* command parsing module */
         for (;;)
@@ -154,8 +236,8 @@ int main(int argc, char **argv)
                 {
                     printf("client exit\n");
 
-                    pthread_cancel(capture_tid);
-                
+                    pthread_cancel(send_tid);
+
                     break;
                 }
                 else
@@ -172,7 +254,11 @@ int main(int argc, char **argv)
         }
     }
 
+
+    pthread_cancel(camera_tid);
+
     camera_close(&camera);
+    video_container_destroy(&container);
 
     close(listen_socket);
 

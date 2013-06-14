@@ -274,6 +274,21 @@ static void camera_set_format(CameraDevice *thiz)
     fmt.fmt.pix.height      = thiz->height;
     fmt.fmt.pix.pixelformat = thiz->format;
 
+    switch(thiz->format)
+    {
+        case PIX_FMT_MJPEG:
+            fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+            break;
+        case PIX_FMT_YUYV:
+            fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+            break;
+        default:
+            fprintf(stderr, "unsupported video format\n");
+            camera_free_resource(thiz);
+            exit(EXIT_FAILURE);
+            break;
+    }
+
     if (xioctl(thiz->fd, VIDIOC_S_FMT, &fmt) == -1)
     {
         perror("set format failed");
@@ -492,21 +507,7 @@ int camera_init(CameraDevice *thiz,
     thiz->height = height;
     thiz->fps = fps;
     thiz->in_size = width * height * 2;
-
-    switch(format)
-    {
-        case PIX_FMT_MJPEG:
-            thiz->format = V4L2_PIX_FMT_MJPEG;
-            break;
-        case PIX_FMT_YUYV:
-            thiz->format = V4L2_PIX_FMT_YUYV;
-            break;
-        default:
-            fprintf(stderr, "unsupported video format\n");
-            camera_free_resource(thiz);
-            return -1;
-            break;
-    }
+    thiz->format = format;
 
     thiz->fd = -1;
     thiz->req_buf_info = NULL;
