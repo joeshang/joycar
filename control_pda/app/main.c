@@ -23,6 +23,7 @@
 #include "decoder.h"
 #include "decoder_mjpeg.h"
 #include "decoder_yuv422.h"
+#include "key_control.h"
 
 //#define DEBUG
 
@@ -33,6 +34,7 @@
 
 int sockfd;
 pthread_t capture_tid;
+pthread_t control_tid;
 
 int fb_width;
 int fb_height;
@@ -204,6 +206,9 @@ static void *recv_handler(void *user_data)
 int main(int argc, char *argv[])
 {
     int fb_fd;
+    int buttons_fd;
+    int joystick_fd;
+
     char *fb_addr = NULL;
     struct fb_var_screeninfo vinfo;
     unsigned long screen_size = 0;
@@ -274,12 +279,23 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    joystick_fd = open("/dev/adc", 0);
+    if (joystick_fd < 0)
+    {
+        perror("open joystick device failed");
+        exit(EXIT_FAILURE);
+    }
+
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == -1)
     {
         perror("connect failed");
         exit(EXIT_FAILURE);
     }
 
+    KeyControlInfo info;
+    info.socket_fd = sockfd;
+    info.joystick_fd = joystick_fd;
+    pthread_create(&control_tid, NULL, key_control_thread, &info);
     pthread_create(&capture_tid, NULL, recv_handler, fb_addr);
 
     for (;;)
